@@ -1,0 +1,31 @@
+{
+  "id": "retromessagegui",
+  "name": "Retro Messages",
+  "shortName": "Messages",
+  "author": "Francois-Le",
+  "version": "0.01",
+  "description": "Messages UI in the Retro Watch style: compact header with the time, sender on its own line, and bursts of messages from the same sender merged into one message",
+  "icon": "app.png",
+  "type": "app",
+  "tags": "tool,system",
+  "supports": ["BANGLEJS2"],
+  "readme": "README.md",
+  "dependencies": {
+    "messageicons": "module",
+    "reply": "module",
+    "Font8x16": "module",
+    "Font8x12": "module",
+    "Font7x11Numeric7Seg": "module"
+  },
+  "provides_modules": ["messagegui"],
+  "storage": [
+    {"name": "messagegui", "url": "lib.js"},
+    {"name": "retromessagegui.app.js", "url": "app.js"},
+    {"name": "retromessagegui.new.js", "url": "app-newmessage.js"},
+    {"name": "retromessagegui.boot.js", "url": "boot.js"},
+    {"name": "retromessagegui.settings.js", "url": "settings.js"},
+    {"name": "retromessagegui.img", "url": "app-icon.js", "evaluate": true}
+  ],
+  "data": [{"name": "retromessagegui.json"}],
+  "sortorder": -9
+}

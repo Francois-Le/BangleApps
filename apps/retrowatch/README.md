@@ -6,7 +6,8 @@ A clock face for Bangle.js 2.
 
 * Time, day of week, date, month and battery level.
 * Status icon: Bluetooth disconnected, locked, or music play/pause.
-* The last text messages, grouped when titles start with the same text.
+* The last text messages, one line per conversation with the number of messages, for example Al (3).
+  WhatsApp counts such as (2 messages) are ignored. A WhatsApp group chat (Family: Bob) is one line (Family).
 * Music track and artist at the top of the screen.
 
 ## Controls

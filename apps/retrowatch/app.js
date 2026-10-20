@@ -113,10 +113,20 @@ function draw() {
   g.drawString(E.getBattery(), 139, 101, true);
 }
 
-function findFirstDiffPos(a, b) {
-  var i = 0;
-  while (a[i] === b[i] && i < a.length && i < b.length) i++;
-  return i;
+/** Remove message counts that WhatsApp adds: "Bob (2 messages)", "Family (3 messages): Bob".
+ Same rule as in retromessagegui. */
+function normTitle(t) {
+  return (t||"").split(": ").map(p => p.replace(/\s\(\d+ [^()]*\)$/, "").trim()).join(": ");
+}
+
+/** Conversation name: the chat name for WhatsApp group chats ("chat: sender"), else the title */
+function convLabel(m) {
+  var t = normTitle(m.title);
+  if ((m.src||"").toLowerCase().includes("whatsapp")) {
+    var i = t.lastIndexOf(": ");
+    if (i > 0) t = t.substr(0, i);
+  }
+  return t;
 }
 
 function updateMessages(message)
@@ -124,7 +134,6 @@ function updateMessages(message)
   //console.log("updateMessages");
   //console.log("All messages:", require("messages").getMessages(message));
  
-  const messageMatchingLen = 8;
   const numLines = 3;
   const lineHeight = 16;
   
@@ -153,26 +162,17 @@ function updateMessages(message)
   {
     if(m.title == "Music") continue;
     
-    var entry = { 
-      msg: m.title || m.body, 
+    // one line per conversation
+    var label = convLabel(m) || m.body || "";
+    var key = (m.src || "") + "|" + label;
+    var existingEntry = entries.find(e => e.key == key);
+    if (existingEntry) existingEntry.count++;
+    else entries.push({ 
+      key: key,
+      msg: label, 
       img: require("messageicons").getImage(m),
       count: 1
-    };
-    
-    var foundAnyMatch = false;
-    for (var existingEntry of entries)
-    {
-      var matchLen = findFirstDiffPos(entry.msg, existingEntry.msg);
-      
-      if (matchLen >= messageMatchingLen)
-      {
-        foundAnyMatch = true;
-        existingEntry.msg = existingEntry.msg.substring(0, matchLen);
-        existingEntry.count++;
-      }
-    }
-    
-    if(!foundAnyMatch) entries.push(entry);
+    });
   }
   
   for (const entry of entries)

@@ -1,1 +1,2 @@
 0.01: First version (imported from personal OneDrive folder)
+0.02: Group messages by conversation. WhatsApp message counts are ignored, so short names (e.g. 2 letters) group correctly
