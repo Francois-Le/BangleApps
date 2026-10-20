@@ -1,0 +1,26 @@
+{
+  "id": "retrowatch",
+  "name": "Retro Watch",
+  "shortName": "Retro Watch",
+  "author": "Francois-Le",
+  "version": "0.01",
+  "description": "Clock face with recent messages and music controls (tap to play/pause, swipe for track and volume).",
+  "icon": "app.png",
+  "type": "clock",
+  "tags": "clock",
+  "supports": ["BANGLEJS2"],
+  "readme": "README.md",
+  "allow_emulator": true,
+  "dependencies": {
+    "messages": "app",
+    "messageicons": "module",
+    "Font7x11Numeric7Seg": "module",
+    "Font6x8": "module",
+    "Font8x12": "module",
+    "Font8x16": "module"
+  },
+  "storage": [
+    {"name": "retrowatch.app.js", "url": "app.js"},
+    {"name": "retrowatch.img", "url": "app-icon.js", "evaluate": true}
+  ]
+}
