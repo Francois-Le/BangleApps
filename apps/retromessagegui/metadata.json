@@ -3,7 +3,7 @@
   "name": "Retro Messages",
   "shortName": "Messages",
   "author": "Francois-Le",
-  "version": "0.01",
+  "version": "0.02",
   "description": "Messages UI in the Retro Watch style: compact header with the time, sender on its own line, and bursts of messages from the same sender merged into one message",
   "icon": "app.png",
   "type": "app",

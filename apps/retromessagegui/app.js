@@ -75,7 +75,7 @@ if (hasIntl) {
   intlLarge = noScale?"Intl":"Intl:2";
 }
 
-var HDR_H = 30; // height of the message header
+var HDR_H = 32; // height of the message header
 var MAX_LINES = 60; // max wrapped lines shown for a merged message (older members are left out)
 var MAX_BODY = 600; // max characters of one message body that we wrap
 
@@ -587,6 +587,19 @@ function showMessageSettings(msg) {
 var SHOWN;
 var headerTimeout;
 
+/** Draw text in bold, right-aligned at xr: each character is drawn twice 1px apart,
+ with 1px more spacing so the characters don't merge. Returns the width used. */
+function drawBold(t, xr, y) {
+  g.setFont("7x11Numeric7Seg").setFontAlign(-1,-1);
+  let w = 0;
+  for (let i=0; i<t.length; i++) w += g.stringWidth(t[i])+1;
+  let x = xr-w;
+  for (let i=0; i<t.length; i++) {
+    g.drawString(t[i], x, y).drawString(t[i], x+1, y);
+    x += g.stringWidth(t[i])+1;
+  }
+  return w;
+}
 /** Draw the compact header: icon, app, age, lock, time / sender, chat */
 function drawHeader() {
   if (!SHOWN) return;
@@ -596,28 +609,29 @@ function drawHeader() {
    .setColor(g.theme.fg2).setBgColor(g.theme.bg2);
   // line 1
   let icon = require("messageicons").getImage(msg);
-  if (icon) g.drawImage(icon, R.x+1, y+1, {scale:0.5});
+  if (icon) g.drawImage(icon, R.x+1, y+2, {scale:0.5});
   let d = new Date();
   let time = (" "+d.getHours()).substr(-2) + ":" + ("0"+d.getMinutes()).substr(-2);
-  g.setFont("7x11Numeric7Seg").setFontAlign(1,-1).drawString(time, x2-1, y+1);
-  let left = R.x+15, right = x2-1-g.stringWidth(time)-4;
+  // time: 2px from the screen edges, bold
+  let tw = drawBold(time, x2-1, y+2);
+  let left = R.x+15, right = x2-1-tw-4;
   if (Bangle.isLocked()) { // small lock
     right -= 7;
-    g.drawRect(right+2, y+2, right+5, y+5).fillRect(right+1, y+6, right+6, y+11);
+    g.drawRect(right+2, y+3, right+5, y+6).fillRect(right+1, y+7, right+6, y+12);
     right -= 4;
   }
   let age = timeAgo(msg);
   g.setFont("8x12");
   if (age && right-g.stringWidth(age)-left>=16) {
-    g.setFontAlign(1,-1).drawString(age, right, y+1);
+    g.setFontAlign(1,-1).drawString(age, right, y+2);
     right -= g.stringWidth(age)+6;
   }
   let src = msg.src||/*LANG*/"Message";
   setF(pickFont(src, "8x12", "6x8"));
   src = fit(src, right-left);
-  if (src.length>2) g.setFontAlign(-1,-1).drawString(src, left, y+1);
+  if (src.length>2) g.setFontAlign(-1,-1).drawString(src, left, y+2);
   // line 2: the sender is never cut to show the chat name
-  let p = splitTitle(msg), sender = p.sender || msg.src || /*LANG*/"Message", ly = y+13;
+  let p = splitTitle(msg), sender = p.sender || msg.src || /*LANG*/"Message", ly = y+15;
   setF(pickFont(sender, "8x16", fbNormal));
   sender = fit(sender, R.w-2);
   g.setFontAlign(-1,-1).drawString(sender, R.x+1, ly);
