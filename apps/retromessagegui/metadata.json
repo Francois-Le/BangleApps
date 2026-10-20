@@ -12,10 +12,7 @@
   "readme": "README.md",
   "dependencies": {
     "messageicons": "module",
-    "reply": "module",
-    "Font8x16": "module",
-    "Font8x12": "module",
-    "Font7x11Numeric7Seg": "module"
+    "reply": "module"
   },
   "provides_modules": ["messagegui"],
   "storage": [

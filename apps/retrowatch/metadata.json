@@ -13,11 +13,7 @@
   "allow_emulator": true,
   "dependencies": {
     "messages": "app",
-    "messageicons": "module",
-    "Font7x11Numeric7Seg": "module",
-    "Font6x8": "module",
-    "Font8x12": "module",
-    "Font8x16": "module"
+    "messageicons": "module"
   },
   "storage": [
     {"name": "retrowatch.app.js", "url": "app.js"},
