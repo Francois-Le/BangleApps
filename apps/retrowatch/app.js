@@ -107,8 +107,12 @@ function drawTime(d) {
   g.drawString(""+d.getDate(), 81, 103, true);
   g.setFont("6x8", 1);
   g.drawString(l.month(d,1), 84, 96, true);
-  g.setFont("7x11Numeric7Seg",2);
-  g.drawString(E.getBattery(), 139, 101, true);
+  // battery: right-aligned (so "100" fits), area cleared first so no old digits remain
+  // the cell is x=118..175; the lightning bolt ends at x=130, so the digits use x=133..173
+  g.clearRect(132, 101, 174, 122);
+  g.setFont("7x11Numeric7Seg",2).setFontAlign(1,-1);
+  g.drawString(E.getBattery(), 174, 101);
+  g.setFontAlign(-1,-1);
 }
 
 function drawBackground() {

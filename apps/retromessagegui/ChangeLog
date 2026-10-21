@@ -1,2 +1,3 @@
 0.01: First version, forked from Messages UI 0.95
 0.02: Header time in bold and 1px further from the screen edges (header 2px taller)
+0.03: Header time moved down 2px (no longer touches the top of the screen)

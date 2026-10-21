@@ -612,8 +612,8 @@ function drawHeader() {
   if (icon) g.drawImage(icon, R.x+1, y+2, {scale:0.5});
   let d = new Date();
   let time = (" "+d.getHours()).substr(-2) + ":" + ("0"+d.getMinutes()).substr(-2);
-  // time: 2px from the screen edges, bold
-  let tw = drawBold(time, x2-1, y+2);
+  // time: 4px from the top, 2px from the right edge, bold
+  let tw = drawBold(time, x2-1, y+4);
   let left = R.x+15, right = x2-1-tw-4;
   if (Bangle.isLocked()) { // small lock
     right -= 7;

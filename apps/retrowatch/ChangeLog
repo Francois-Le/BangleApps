@@ -1,3 +1,4 @@
 0.01: First version (imported from personal OneDrive folder)
 0.02: Group messages by conversation. WhatsApp message counts are ignored, so short names (e.g. 2 letters) group correctly
 0.03: New layout: seconds dial (updated every second) with the status icon in its centre, smaller time font, song title across the top, artist next to the dial, rounded info bar
+0.04: Battery level right-aligned so 100% fits in the info bar
