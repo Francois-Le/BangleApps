@@ -23,6 +23,7 @@ var isMusicPlaying = false;
 var musicTrack = "";
 var musicArtist = "";
 var drawTimeout;
+var musicIdleTimeout;
 
 /** Same image, with colour 0 transparent (so the icon is drawn on the dial without a box) */
 function transparent(img) {
@@ -123,12 +124,101 @@ function drawBackground() {
   [5,3,2,1,1].forEach(function(n,i){ g.fillRect(0,95+i,n-1,95+i); g.fillRect(176-n,95+i,175,95+i); });
 }
 
+// ---- Weather panel (shown in the music area when no music is playing) ----
+// Data comes from the "weather" app (Gadgetbridge). The rain graph needs
+// Weather app settings -> Data type = "forecast".
+var weatherLib;
+try { weatherLib = require("weather"); } catch (e) {}
+
+function getWeather() {
+  if (!weatherLib) return;
+  var w;
+  try { w = weatherLib.getWeather(true); } catch (e) { return; }
+  if (!w || w.temp === undefined) return;
+  var r = {
+    temp: Math.round(w.v==2 ? w.temp : w.temp-273),   // v1 is in Kelvin
+    wind: Math.round(w.wind||0), wdir: w.wdir
+  };
+  if (w.sunrise && w.sunset) { r.rise = w.sunrise*1000; r.set = w.sunset*1000; }
+  var hf = w.hourfcast;
+  if (hf && hf.rain && hf.time) {               // next 24 h of rain chance, from now
+    var now = Date.now()/1000, i0 = 0;
+    while (i0 < hf.time.length-1 && hf.time[i0+1] <= now) i0++;
+    r.rain = [];
+    for (var i=i0; i<hf.rain.length && r.rain.length<24; i++) r.rain.push(hf.rain[i]);
+    r.rainStart = hf.time[i0]*1000;
+    if (r.rain.length < 2) delete r.rain;
+  }
+  return r;
+}
+
+function hhmm(t) { var d = new Date(t); return ("0"+d.getHours()).substr(-2)+":"+("0"+d.getMinutes()).substr(-2); }
+
+function drawWeather() {
+  var w = getWeather();
+  if (!w) return;
+  g.reset().setBgColor(0,0,0).setColor(0,1,1).setFontAlign(-1,-1);
+  // temperature (top left)
+  g.setFont("8x16").drawString(w.temp, 1, 1);
+  var tw = g.stringWidth(""+w.temp);
+  g.drawRect(tw+3, 2, tw+5, 4);
+  g.setFont("8x12").drawString("C", tw+7, 3);
+  // wind (top right): speed, tiny unit, compass arrow pointing where the wind blows to
+  g.setFont("8x16").setFontAlign(1,-1).drawString(w.wind, 147, 1).setFontAlign(-1,-1);
+  g.setFont("4x6").drawString("KM", 149, 3).drawString("/H", 149, 10);
+  var cx = 167, cy = 8;
+  g.drawCircle(cx, cy, 8);
+  [0,90,180,270].forEach(function(d){ var a=d*Math.PI/180; g.setPixel(cx+Math.round(Math.sin(a)*6), cy-Math.round(Math.cos(a)*6)); });
+  if (w.wdir !== undefined && w.wind > 0) {
+    var a = (w.wdir+180)*Math.PI/180, sn = Math.sin(a), cs = -Math.cos(a);
+    g.setColor(1,1,0).fillPoly([cx+sn*7,cy+cs*7, cx-sn*2-cs*4,cy-cs*2+sn*4, cx-sn*2+cs*4,cy-cs*2-sn*4])
+     .drawLine(cx, cy, cx-sn*6, cy-cs*6);
+  }
+  // sun track between sunrise and sunset, times in tiny text under the ends
+  if (w.rise) {
+    var x0 = 40, x1 = 124, by = 5;
+    var f = E.clip((Date.now()-w.rise)/(w.set-w.rise), 0, 1), sx = x0+Math.round(f*(x1-x0));
+    g.setColor(0,1,1);
+    for (var x=x0; x<=x1; x+=3) g.setPixel(x, by);
+    g.fillRect(x0, by-1, sx, by+1).fillRect(x0, by-3, x0, by+4).fillRect(x1, by-3, x1, by+4)
+     .fillRect((x0+x1)>>1, by-2, (x0+x1)>>1, by+2);
+    var day = Date.now() >= w.rise && Date.now() <= w.set;
+    g.setColor(day ? "#ff0" : "#0ff").fillCircle(sx, by, 3);
+    if (day) for (var k=0; k<8; k++) { var b=k*Math.PI/4; g.setPixel(sx+Math.round(Math.cos(b)*5), by+Math.round(Math.sin(b)*5)); }
+    g.setColor(0,1,1).setFont("4x6").drawString(hhmm(w.rise), x0, 11)
+     .setFontAlign(1,-1).drawString(hhmm(w.set), x1, 11).setFontAlign(-1,-1);
+  }
+  // rain chance for the next 24 h: line graph on a dotted grid
+  if (w.rain) {
+    g.setColor(0,1,1).fillRect({x:76, y:18, x2:175, y2:44, r:5});
+    g.setColor(0,0,0).fillRect({x:77, y:19, x2:174, y2:43, r:4});
+    var px = function(i){ return 80+i*4; }, py = function(r){ return 40-Math.round(r*18/100); };
+    g.setColor(0,1,1);
+    for (var y=22; y<=40; y+=6) for (var x=80; x<=172; x+=4) g.setPixel(x, y);
+    for (var i=0; i<w.rain.length; i++) {
+      var h = new Date(w.rainStart+i*3600000).getHours();
+      if (h%6 == 0) g.fillRect(px(i), 41, px(i), 42);   // ticks at 0h, 6h, 12h, 18h
+    }
+    for (var i=1; i<w.rain.length; i++)
+      g.drawLine(px(i-1), py(w.rain[i-1]), px(i), py(w.rain[i])).drawLine(px(i-1), py(w.rain[i-1])-1, px(i), py(w.rain[i])-1);
+    var im = 0;
+    w.rain.forEach(function(r, i){ if (r > w.rain[im]) im = i; });
+    g.setColor(1,1,0).fillRect(px(0)-1, py(w.rain[0])-2, px(0)+1, py(w.rain[0])+1);
+    g.setFont("4x6").drawString("RAIN", 80, 20);
+    if (w.rain[im] > 0) {
+      g.fillRect(px(im)-1, py(w.rain[im])-2, px(im)+1, py(w.rain[im])+1);
+      var ph = new Date(w.rainStart+im*3600000).getHours();
+      g.setFontAlign(1,-1).drawString("MAX "+w.rain[im]+"% "+ph+"H", 172, 20).setFontAlign(-1,-1);
+    }
+  }
+}
+
 // ---- Music: title across the top, artist on the right of the dial ----
 function drawMusicInfo() {
   g.reset().setBgColor(0,0,0).setColor(0,1,1);
   g.clearRect(0, 0, 175, DIAL.y-1);
   g.clearRect(DIAL.x+DIAL.s, DIAL.y, 175, TIME.y-1);
-  if (!isMusicActive) return;
+  if (!isMusicActive) return drawWeather();
   g.setFont("8x16").drawString(ellipsis(musicTrack, 174), 1, 1);
   g.setFont("8x12");
   var lines = g.wrapString(musicArtist, ARTIST_W);
@@ -232,7 +322,11 @@ function updateMessages(message)
 var lastMinute = -1;
 function tick() {
   var d = new Date();
-  if (d.getMinutes() != lastMinute) { lastMinute = d.getMinutes(); drawTime(d); }
+  if (d.getMinutes() != lastMinute) {
+    lastMinute = d.getMinutes();
+    drawTime(d);
+    if (!isMusicActive && lastMinute%5 == 0) drawMusicInfo();
+  }
   drawDial(d.getSeconds());
   if (drawTimeout) clearTimeout(drawTimeout);
   drawTimeout = setTimeout(function(){ drawTimeout = undefined; tick(); }, 1000 - (Date.now() % 1000));
@@ -258,8 +352,19 @@ global.GB = (_GB => e => {
       redrawDial();
       break;
     case "musicstate":
-      isMusicActive = true;
       isMusicPlaying = e.state == "play";
+      if (musicIdleTimeout) clearTimeout(musicIdleTimeout);
+      musicIdleTimeout = undefined;
+      if (e.state == "stop") {
+        isMusicActive = false;
+      } else {
+        isMusicActive = true;
+        // paused for 10 minutes: show the weather again
+        if (!isMusicPlaying) musicIdleTimeout = setTimeout(function(){
+          musicIdleTimeout = undefined; isMusicActive = false; drawMusicInfo(); redrawDial();
+        }, 10*60000);
+      }
+      drawMusicInfo();
       redrawDial();
       break;
     default:
@@ -294,6 +399,7 @@ Bangle.on('drag', function(e) {
   }
 });
 
+if (weatherLib) weatherLib.on("update2", function(){ if (!isMusicActive) drawMusicInfo(); });
 Bangle.on('lock', redrawDial);
 NRF.on('connect', redrawDial);
 NRF.on('disconnect', redrawDial);

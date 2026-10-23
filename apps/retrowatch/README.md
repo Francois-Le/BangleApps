@@ -10,6 +10,11 @@ A clock face for Bangle.js 2.
 * The last text messages, one line per conversation with the number of messages, for example Al (3).
   WhatsApp counts such as (2 messages) are ignored. A WhatsApp group chat (Family: Bob) is one line (Family).
 * Music: the track across the top of the screen, the artist next to the dial. Long names end with "...".
+* Weather, when no music is playing: temperature, sun position between sunrise and sunset (with the times),
+  wind speed (km/h) and direction, and a graph of the chance of rain for the next 24 hours.
+  The weather comes from Gadgetbridge through the Weather app. For the rain graph, set
+  Settings -> Apps -> Weather -> Data type to "forecast". Gadgetbridge needs a weather provider app
+  on the phone (for example Breezy Weather).
 
 ## Controls
 
