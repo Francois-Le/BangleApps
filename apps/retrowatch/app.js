@@ -137,6 +137,8 @@ function getWeather() {
   if (!w || w.temp === undefined) return;
   var r = {
     temp: Math.round(w.v==2 ? w.temp : w.temp-273),   // v1 is in Kelvin
+    // weather for the whole day (set by the Open-Meteo app), else the current weather
+    daycode: w.daycode!==undefined ? w.daycode : w.code,
     wind: Math.round(w.wind||0), wdir: w.wdir
   };
   if (w.sunrise && w.sunset) { r.rise = w.sunrise*1000; r.set = w.sunset*1000; }
@@ -152,17 +154,46 @@ function getWeather() {
   return r;
 }
 
+/** 16x16 icon in the top left corner for an OpenWeatherMap condition code */
+function drawWxIcon(code) {
+  var K="#000", Y="#ff0", W="#fff", C="#0ff";
+  function sun(cx, cy, r) {
+    g.setColor(Y).fillCircle(cx, cy, r);
+    for (var k=0; k<8; k++) { var a=k*Math.PI/4;
+      g.drawLine(cx+Math.round(Math.cos(a)*(r+2)), cy+Math.round(Math.sin(a)*(r+2)), cx+Math.round(Math.cos(a)*(r+3)), cy+Math.round(Math.sin(a)*(r+3))); }
+  }
+  function cloud(ox, oy, col) {   // 14x8 cloud with a black outline, top-left ox,oy
+    g.setColor(K).fillCircle(ox+4,oy+4,4).fillCircle(ox+8,oy+3,5).fillCircle(ox+11,oy+5,3).fillRect(ox+1,oy+5,ox+14,oy+9);
+    g.setColor(col).fillCircle(ox+4,oy+4,3).fillCircle(ox+8,oy+3,4).fillCircle(ox+11,oy+5,2).fillRect(ox+2,oy+5,ox+13,oy+8);
+  }
+  function drops(n, len) {        // slanted rain drops under the cloud
+    g.setColor(C);
+    for (var i=0; i<n; i++) { var dx = 3+i*Math.round(9/(n-1)); g.drawLine(dx+len-1, 11, dx, 10+len); }
+  }
+  var grp = Math.floor(code/100);
+  if (code == 801 || code == 802) { sun(10, 5, 3); cloud(0, 6, W); }                 // partly cloudy
+  else if (code == 803 || code == 804) { cloud(2, 1, C); cloud(0, 5, W); }           // cloudy
+  else if (grp == 7) { g.setColor(C); [3,6,9,12].forEach(function(r,i){ g.fillRect(1+(i%2)*2, r, 14-((i+1)%2)*2, r); }); } // fog
+  else if (grp == 2) { cloud(0, 0, W); g.setColor(Y).fillPoly([8,9, 5,13, 7,13, 6,16, 10,11, 8,11, 9,9]); }               // thunder
+  else if (grp == 6) { cloud(0, 0, W); g.setColor(W); [[3,12],[8,14],[12,11],[6,10],[11,15]].forEach(function(p){ g.fillRect(p[0],p[1],p[0]+1,p[1]+1); }); } // snow
+  else if (grp == 3) { cloud(0, 0, W); g.setColor(C); [[3,11],[7,13],[11,11],[5,15],[9,15]].forEach(function(p){ g.setPixel(p[0],p[1]); }); } // drizzle
+  else if (grp == 5) { cloud(0, 0, W); drops(code>=502 ? 4 : 3, code>=502 ? 5 : 4); } // rain / heavy rain
+  else sun(7, 7, 4);                                                                   // clear
+}
+
 function hhmm(t) { var d = new Date(t); return ("0"+d.getHours()).substr(-2)+":"+("0"+d.getMinutes()).substr(-2); }
 
 function drawWeather() {
   var w = getWeather();
   if (!w) return;
   g.reset().setBgColor(0,0,0).setColor(0,1,1).setFontAlign(-1,-1);
-  // temperature (top left)
-  g.setFont("8x16").drawString(w.temp, 1, 1);
-  var tw = g.stringWidth(""+w.temp);
-  g.drawRect(tw+3, 2, tw+5, 4);
-  g.setFont("8x12").drawString("C", tw+7, 3);
+  // weather icon for the day + temperature (top left)
+  if (w.daycode !== undefined) drawWxIcon(w.daycode);
+  g.setColor(0,1,1).setBgColor(0,0,0).setFont("8x16").drawString(w.temp, 18, 1);
+  var tw = 18+g.stringWidth(""+w.temp);
+  g.drawRect(tw+2, 2, tw+4, 4);
+  g.setFont("8x12").drawString("C", tw+6, 3);
+  var tempEnd = tw+6+g.stringWidth("C");
   // wind (top right): speed, tiny unit, compass arrow pointing where the wind blows to
   g.setFont("8x16").setFontAlign(1,-1).drawString(w.wind, 147, 1).setFontAlign(-1,-1);
   g.setFont("4x6").drawString("KM", 149, 3).drawString("/H", 149, 10);
@@ -176,7 +207,7 @@ function drawWeather() {
   }
   // sun track between sunrise and sunset, times in tiny text under the ends
   if (w.rise) {
-    var x0 = 40, x1 = 124, by = 5;
+    var x0 = tempEnd+6, x1 = 124, by = 5;   // bar starts right after the temperature
     var f = E.clip((Date.now()-w.rise)/(w.set-w.rise), 0, 1), sx = x0+Math.round(f*(x1-x0));
     g.setColor(0,1,1);
     for (var x=x0; x<=x1; x+=3) g.setPixel(x, by);
@@ -192,9 +223,9 @@ function drawWeather() {
   if (w.rain) {
     g.setColor(0,1,1).fillRect({x:76, y:18, x2:175, y2:44, r:5});
     g.setColor(0,0,0).fillRect({x:77, y:19, x2:174, y2:43, r:4});
-    var px = function(i){ return 80+i*4; }, py = function(r){ return 40-Math.round(r*18/100); };
+    var px = function(i){ return 80+i*4; }, py = function(r){ return 40-Math.round(r*12/100); };  // 0..100% = y 40..28, below the labels
     g.setColor(0,1,1);
-    for (var y=22; y<=40; y+=6) for (var x=80; x<=172; x+=4) g.setPixel(x, y);
+    for (var y=28; y<=40; y+=6) for (var x=80; x<=172; x+=4) g.setPixel(x, y);
     for (var i=0; i<w.rain.length; i++) {
       var h = new Date(w.rainStart+i*3600000).getHours();
       if (h%6 == 0) g.fillRect(px(i), 41, px(i), 42);   // ticks at 0h, 6h, 12h, 18h
