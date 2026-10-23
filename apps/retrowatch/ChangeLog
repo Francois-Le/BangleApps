@@ -5,3 +5,4 @@
 0.05: Weather panel when no music is playing: temperature, sun position between sunrise and sunset, wind speed and direction, 24 h rain chance graph. Music area returns to the weather when music stops or stays paused for 10 minutes
 0.06: Weather icon for the whole day next to the temperature; sun bar starts right after the temperature; rain graph no longer overlaps its labels at 100%
 0.07: At night the sun bar becomes a night bar (sunset to next sunrise) with a moon
+0.08: Rain graph uses the whole height of its box; removed the MAX label

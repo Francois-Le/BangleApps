@@ -229,28 +229,24 @@ function drawWeather() {
     g.setColor(0,1,1).setFont("4x6").drawString(hhmm(a), x0, 11)
      .setFontAlign(1,-1).drawString(hhmm(b), x1, 11).setFontAlign(-1,-1);
   }
-  // rain chance for the next 24 h: line graph on a dotted grid
+  // rain chance for the next 24 h: line graph using the whole box, fixed 0..100% scale
   if (w.rain) {
     g.setColor(0,1,1).fillRect({x:76, y:18, x2:175, y2:44, r:5});
     g.setColor(0,0,0).fillRect({x:77, y:19, x2:174, y2:43, r:4});
-    var px = function(i){ return 80+i*4; }, py = function(r){ return 40-Math.round(r*12/100); };  // 0..100% = y 40..28, below the labels
+    var px = function(i){ return 80+i*4; }, py = function(r){ return 41-Math.round(r*20/100); };  // 0% = y41, 100% = y21
     g.setColor(0,1,1);
-    for (var y=28; y<=40; y+=6) for (var x=80; x<=172; x+=4) g.setPixel(x, y);
+    for (var y=21; y<=41; y+=10) for (var x=80; x<=172; x+=4) g.setPixel(x, y);   // 0, 50, 100%
     for (var i=0; i<w.rain.length; i++) {
       var h = new Date(w.rainStart+i*3600000).getHours();
-      if (h%6 == 0) g.fillRect(px(i), 41, px(i), 42);   // ticks at 0h, 6h, 12h, 18h
+      if (h%6 == 0) g.fillRect(px(i), 42, px(i), 43);   // ticks at 0h, 6h, 12h, 18h
     }
     for (var i=1; i<w.rain.length; i++)
       g.drawLine(px(i-1), py(w.rain[i-1]), px(i), py(w.rain[i])).drawLine(px(i-1), py(w.rain[i-1])-1, px(i), py(w.rain[i])-1);
     var im = 0;
     w.rain.forEach(function(r, i){ if (r > w.rain[im]) im = i; });
-    g.setColor(1,1,0).fillRect(px(0)-1, py(w.rain[0])-2, px(0)+1, py(w.rain[0])+1);
+    g.setColor(1,1,0).fillRect(px(0)-1, py(w.rain[0])-2, px(0)+1, py(w.rain[0])+1);   // now
+    if (w.rain[im] > 0) g.fillRect(px(im)-1, py(w.rain[im])-2, px(im)+1, py(w.rain[im])+1);   // peak
     g.setFont("4x6").drawString("RAIN", 80, 20);
-    if (w.rain[im] > 0) {
-      g.fillRect(px(im)-1, py(w.rain[im])-2, px(im)+1, py(w.rain[im])+1);
-      var ph = new Date(w.rainStart+im*3600000).getHours();
-      g.setFontAlign(1,-1).drawString("MAX "+w.rain[im]+"% "+ph+"H", 172, 20).setFontAlign(-1,-1);
-    }
   }
 }
 
