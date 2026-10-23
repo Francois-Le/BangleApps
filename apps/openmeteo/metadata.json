@@ -2,7 +2,7 @@
   "name": "Open-Meteo weather provider",
   "shortName": "Open-Meteo",
   "author": "Francois-Le",
-  "version": "0.01",
+  "version": "0.02",
   "description": "Fetches the weather from Open-Meteo (free, no API key) through Gadgetbridge's internet access, including the hourly forecast, for the Weather app and clocks. No weather app on the phone needed.",
   "icon": "app.png",
   "type": "bootloader",

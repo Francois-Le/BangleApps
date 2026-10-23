@@ -38,7 +38,7 @@ exports.url = function(loc) {
   return "https://api.open-meteo.com/v1/forecast?latitude="+loc.lat.toFixed(2)+"&longitude="+loc.lon.toFixed(2)+
     "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,precipitation_probability"+
     "&hourly=temperature_2m,precipitation_probability,weather_code"+
-    "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,uv_index_max"+
+    "&daily=weather_code,sunrise,sunset,temperature_2m_max,temperature_2m_min,uv_index_max"+
     "&forecast_hours=25&forecast_days=1&timezone=auto&timeformat=unixtime";
 };
 
@@ -52,6 +52,7 @@ exports.store = function(d, locName) {
     temp:Math.round(c.temperature_2m), hum:c.relative_humidity_2m,
     rain:c.precipitation_probability|0, uv:day.uv_index_max[0],
     code:code[0], txt:code[1],
+    daycode:owm(day.weather_code[0])[0],   // weather for the whole day
     wind:Math.round(c.wind_speed_10m), wdir:c.wind_direction_10m, wrose:wrose(c.wind_direction_10m),
     loc:locName,
     hi:Math.round(day.temperature_2m_max[0]), lo:Math.round(day.temperature_2m_min[0]),
