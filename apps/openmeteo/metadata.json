@@ -1,0 +1,19 @@
+{ "id": "openmeteo",
+  "name": "Open-Meteo weather provider",
+  "shortName": "Open-Meteo",
+  "author": "Francois-Le",
+  "version": "0.01",
+  "description": "Fetches the weather from Open-Meteo (free, no API key) through Gadgetbridge's internet access, including the hourly forecast, for the Weather app and clocks. No weather app on the phone needed.",
+  "icon": "app.png",
+  "type": "bootloader",
+  "tags": "boot,tool,weather",
+  "supports": ["BANGLEJS2"],
+  "readme": "README.md",
+  "dependencies": {"weather": "app", "mylocation": "app"},
+  "storage": [
+    {"name": "openmeteo.boot.js", "url": "boot.js"},
+    {"name": "openmeteo", "url": "lib.js"},
+    {"name": "openmeteo.settings.js", "url": "settings.js"}
+  ],
+  "data": [{"name": "openmeteo.json"}]
+}
