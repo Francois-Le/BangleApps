@@ -205,19 +205,29 @@ function drawWeather() {
     g.setColor(1,1,0).fillPoly([cx+sn*7,cy+cs*7, cx-sn*2-cs*4,cy-cs*2+sn*4, cx-sn*2+cs*4,cy-cs*2-sn*4])
      .drawLine(cx, cy, cx-sn*6, cy-cs*6);
   }
-  // sun track between sunrise and sunset, times in tiny text under the ends
+  // sun track (day: sunrise -> sunset) or night track (sunset -> next sunrise)
   if (w.rise) {
     var x0 = tempEnd+6, x1 = 124, by = 5;   // bar starts right after the temperature
-    var f = E.clip((Date.now()-w.rise)/(w.set-w.rise), 0, 1), sx = x0+Math.round(f*(x1-x0));
+    var now = Date.now(), DAY = 86400000, a, b, night;
+    if (now < w.rise) { night = true; a = w.set-DAY; b = w.rise; }         // early morning
+    else if (now > w.set) { night = true; a = w.set; b = w.rise+DAY; }     // evening
+    else { night = false; a = w.rise; b = w.set; }
+    var f = E.clip((now-a)/(b-a), 0, 1), sx = x0+Math.round(f*(x1-x0));
     g.setColor(0,1,1);
     for (var x=x0; x<=x1; x+=3) g.setPixel(x, by);
     g.fillRect(x0, by-1, sx, by+1).fillRect(x0, by-3, x0, by+4).fillRect(x1, by-3, x1, by+4)
      .fillRect((x0+x1)>>1, by-2, (x0+x1)>>1, by+2);
-    var day = Date.now() >= w.rise && Date.now() <= w.set;
-    g.setColor(day ? "#ff0" : "#0ff").fillCircle(sx, by, 3);
-    if (day) for (var k=0; k<8; k++) { var b=k*Math.PI/4; g.setPixel(sx+Math.round(Math.cos(b)*5), by+Math.round(Math.sin(b)*5)); }
-    g.setColor(0,1,1).setFont("4x6").drawString(hhmm(w.rise), x0, 11)
-     .setFontAlign(1,-1).drawString(hhmm(w.set), x1, 11).setFontAlign(-1,-1);
+    if (night) {
+      // crescent moon: white disc with a black disc cut out of it
+      g.setColor(0,0,0).fillCircle(sx, by, 5);
+      g.setColor(1,1,1).fillCircle(sx, by, 4);
+      g.setColor(0,0,0).fillCircle(sx+2, by-1, 3);
+    } else {
+      g.setColor(1,1,0).fillCircle(sx, by, 3);
+      for (var k=0; k<8; k++) { var r=k*Math.PI/4; g.setPixel(sx+Math.round(Math.cos(r)*5), by+Math.round(Math.sin(r)*5)); }
+    }
+    g.setColor(0,1,1).setFont("4x6").drawString(hhmm(a), x0, 11)
+     .setFontAlign(1,-1).drawString(hhmm(b), x1, 11).setFontAlign(-1,-1);
   }
   // rain chance for the next 24 h: line graph on a dotted grid
   if (w.rain) {
