@@ -4,7 +4,8 @@ A clock face for Bangle.js 2.
 
 ## Features
 
-* Time, day of week, date, month and battery level.
+* Time (24h), ISO week number, day of the year and a bar showing how much of the day has passed.
+* Day of week, date (day.month) and battery level.
 * Seconds dial (updated every second), inspired by the Seiko MGS5 watch.
 * Status icon in the centre of the dial: Bluetooth disconnected, locked, or music play/pause.
 * The last text messages, one line per conversation with the number of messages, for example Al (3).
