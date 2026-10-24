@@ -134,22 +134,29 @@ function drawTime(d) {
   var ex = 80+Math.round((h*60+m)/1440*91);
   dotsH(80, 171, 88);
   g.fillRect(80, 87, ex, 89).setColor(1,1,0).fillRect(ex-1, 86, ex+1, 90);
-  // info bar: day | date | battery (y=95..119)
-  var IB = 95, IB2 = 119;
-  frame(0, IB, 175, IB2);
+  // info bar: day | date | month | battery, labels sit in the top border (y=95..119)
+  var l2 = require("locale");
+  var cells = [
+    [0,   "DAY",  l2.dow(d,1).toUpperCase().substr(0,3)],
+    [42,  "DATE", ""+d.getDate()],
+    [78,  "MON",  l2.month(d,1).toUpperCase().substr(0,3)],
+    [120, "PWR",  E.getBattery()+"%"]
+  ];
+  g.reset().setBgColor(0,0,0).clearRect(0, 95, 175, 119);
+  frame(0, 97, 175, 119);
   g.setColor(0,1,1);
-  dotsV(60, IB+3, IB2-3); dotsV(118, IB+3, IB2-3); dotsH(3, 172, IB+9);
-  g.setFont("4x6").setFontAlign(-1,-1).setColor(1,1,0)
-   .drawString("DAY", 6, IB+3).drawString("DATE", 64, IB+3).drawString("PWR", 122, IB+3);
-  var bat = E.getBattery();
-  g.setColor(0,1,1).setFont("8x12")
-   .drawString(l.dow(d,1).toUpperCase(), 6, IB+12)
-   .drawString(("0"+d.getDate()).substr(-2)+"."+("0"+(d.getMonth()+1)).substr(-2), 64, IB+12)
-   .drawString(bat+"%", 122, IB+12);
+  dotsV(41, 100, 116); dotsV(77, 100, 116); dotsV(119, 100, 116);
+  cells.forEach(function(c) {
+    g.setFont("4x6").setFontAlign(-1,-1);
+    var w = g.stringWidth(c[1]);
+    g.setColor(0,0,0).fillRect(c[0]+5, 95, c[0]+7+w, 100);   // gap in the border for the label
+    g.setColor(1,1,0).drawString(c[1], c[0]+7, 95);
+    g.setColor(0,1,1).setFont("8x16").drawString(c[2], c[0]+6, 101);
+  });
   // small battery icon, filled to the battery level (1px gap between fill and outline)
-  var fh = Math.round(7*bat/100);
-  g.drawRect(164, IB+12, 170, IB+22).fillRect(166, IB+11, 168, IB+11);
-  if (fh > 0) g.fillRect(166, IB+20-fh+1, 168, IB+20);
+  var bat = E.getBattery(), fh = Math.round(11*bat/100);
+  g.setColor(0,1,1).drawRect(164, 102, 170, 116).fillRect(166, 100, 168, 101);
+  if (fh > 0) g.fillRect(166, 114-fh+1, 168, 114);
 }
 
 function drawBackground() {
