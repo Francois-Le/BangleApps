@@ -102,9 +102,10 @@ function isoWeek(d) {
 function dayOfYear(d) {
   return Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()-new Date(d.getFullYear(), 0, 1).getTime())/86400000)+1;
 }
-function frame(x, y, x2, y2) {   // cyan rounded frame, black inside
-  g.setColor(0,1,1).fillRect({x:x, y:y, x2:x2, y2:y2, r:6});
-  g.setColor(0,0,0).fillRect({x:x+1, y:y+1, x2:x2-1, y2:y2-1, r:5});
+function frame(x, y, x2, y2, r) {   // cyan rounded frame, black inside
+  r = r || 6;
+  g.setColor(0,1,1).fillRect({x:x, y:y, x2:x2, y2:y2, r:r});
+  g.setColor(0,0,0).fillRect({x:x+1, y:y+1, x2:x2-1, y2:y2-1, r:r-1});
 }
 function dotsH(x1, x2, y) { for (var x=x1; x<=x2; x+=2) g.setPixel(x, y); }
 function dotsV(x, y1, y2) { for (var y=y1; y<=y2; y+=2) g.setPixel(x, y); }
@@ -121,21 +122,22 @@ function drawTime(d) {
   var ex = 80+Math.round((h*60+m)/1440*91);
   dotsH(80, 171, 88);
   g.fillRect(80, 87, ex, 89).setColor(1,1,0).fillRect(ex-1, 86, ex+1, 90);
-  // info bar: day | date | battery
-  frame(0, 95, 175, 127);
+  // info bar: day | date | battery (y=95..119)
+  var IB = 95, IB2 = 119;
+  frame(0, IB, 175, IB2);
   g.setColor(0,1,1);
-  dotsV(60, 98, 124); dotsV(118, 98, 124); dotsH(3, 172, 105);
+  dotsV(60, IB+3, IB2-3); dotsV(118, IB+3, IB2-3); dotsH(3, 172, IB+9);
   g.setFont("4x6").setFontAlign(-1,-1).setColor(1,1,0)
-   .drawString("DAY", 6, 98).drawString("DATE", 64, 98).drawString("PWR", 122, 98);
+   .drawString("DAY", 6, IB+3).drawString("DATE", 64, IB+3).drawString("PWR", 122, IB+3);
   var bat = E.getBattery();
-  g.setColor(0,1,1).setFont("8x16")
-   .drawString(l.dow(d,1).toUpperCase(), 6, 108)
-   .drawString(("0"+d.getDate()).substr(-2)+"."+("0"+(d.getMonth()+1)).substr(-2), 64, 108)
-   .drawString(bat+"%", 122, 108);
-  // small battery icon, filled to the battery level
-  var fh = Math.round(13*bat/100);
-  g.drawRect(163, 110, 170, 124).fillRect(165, 108, 168, 109);
-  if (fh > 0) g.fillRect(165, 123-fh, 168, 122);
+  g.setColor(0,1,1).setFont("8x12")
+   .drawString(l.dow(d,1).toUpperCase(), 6, IB+12)
+   .drawString(("0"+d.getDate()).substr(-2)+"."+("0"+(d.getMonth()+1)).substr(-2), 64, IB+12)
+   .drawString(bat+"%", 122, IB+12);
+  // small battery icon, filled to the battery level (1px gap between fill and outline)
+  var fh = Math.round(7*bat/100);
+  g.drawRect(164, IB+12, 170, IB+22).fillRect(166, IB+11, 168, IB+11);
+  if (fh > 0) g.fillRect(166, IB+20-fh+1, 168, IB+20);
 }
 
 function drawBackground() {
@@ -307,68 +309,53 @@ function convLabel(m) {
   return t;
 }
 
+/** Snap an app colour ("#4c5") to the nearest of the screen's 8 colours, so icons aren't dithered */
+function snapColor(c) {
+  if (typeof c != "string" || c[0] != "#") return "#0ff";
+  var h = c.length==4 ? [c[1],c[2],c[3]] : [c[1],c[3],c[5]];
+  var r = parseInt(h[0],16)>=8, gr = parseInt(h[1],16)>=8, b = parseInt(h[2],16)>=8;
+  if (!r && !gr && !b) return "#0ff";
+  return "#"+(r?"f":"0")+(gr?"f":"0")+(b?"f":"0");
+}
+
+/** Message cards: one card per conversation (newest first), y=121..175 */
+const CARDS_Y = 121;
 function updateMessages(message)
 {
-  //console.log("updateMessages");
-  //console.log("All messages:", require("messages").getMessages(message));
- 
-  const numLines = 3;
-  const lineHeight = 16;
-  
-  var y = 175 - numLines * lineHeight;
-  var count = 0;
-  
-  g.reset();
-  //g.setColor(0, 1, 1);
-  g.setColor(0, 0, 0);
-  g.fillRect(0, y, 175, 175);
-  
-  g.reset();
-  g.setFont("8x16", 1);
-  g.setColor(0, 1, 1);
-  
+  g.reset().setBgColor(0,0,0).clearRect(0, CARDS_Y, 175, 175);
   var entries = [];
-  
-  /*var testMessages = [
-    {title: "test aaa: 1"},
-    {title: "test aaa: 2"},
-    {title: "test b"},
-    ];
-  for (const m of testMessages)*/
-  
-  for(const m of require("messages").getMessages(message))
+  for (const m of require("messages").getMessages(message))
   {
-    if(m.title == "Music") continue;
-    
-    // one line per conversation
+    if (m.title == "Music") continue;
+    // one card per conversation
     var label = convLabel(m) || m.body || "";
     var key = (m.src || "") + "|" + label;
     var existingEntry = entries.find(e => e.key == key);
     if (existingEntry) existingEntry.count++;
-    else entries.push({ 
+    else entries.push({
       key: key,
-      msg: label, 
+      msg: label,
+      body: m.body || "",
       img: require("messageicons").getImage(m),
+      col: snapColor(require("messageicons").getColor(m, {default:"#0ff"})),
       count: 1
     });
   }
-  
-  for (const entry of entries)
+  for (var i=0; i<3 && i<entries.length; i++)
   {
-    g.drawImage(entry.img, 0, y+1, {scale:0.5});
-    if (entry.count > 1)
-    {
-      g.drawString(`${entry.msg} (${entry.count})`, 13, y);
+    var e = entries[i], x = i*59, x2 = x+57, y = CARDS_Y;
+    frame(x, y, x2, 175, 5);
+    g.setColor(e.col).setBgColor(0,0,0).drawImage(e.img, x+4, y+4, {scale:0.5});
+    if (e.count > 1) {   // unread count badge
+      g.setColor(1,1,0).fillRect({x:x2-15, y:y+4, x2:x2-4, y2:y+13, r:3});
+      g.setColor(0,0,0).setFont("4x6").setFontAlign(0,-1).drawString(e.count, x2-9, y+6).setFontAlign(-1,-1);
     }
-    else
-    {
-      g.drawString(entry.msg, 13, y);
-    }
-    
-    y += lineHeight;
-    count++;
-    
-    if(count >= 5) break;
+    g.setColor(0,1,1).setFont("6x8").drawString(ellipsis(e.msg, 50), x+4, y+19);
+    // start of the last message, 3 lines, "..." if longer
+    g.setFont("4x6").setColor(1,1,1);
+    var l = g.wrapString(e.body, 50);
+    for (var j=0; j<3 && j<l.length; j++)
+      g.drawString(j==2 && l.length>3 ? ellipsis(l[2]+" "+l[3], 50) : l[j], x+4, y+29+j*7);
   }
 }
 
@@ -432,7 +419,7 @@ Bangle.on('touch', function(zone,e) {
   // tap on the dial: play/pause
   if (e.x < DIAL.x+DIAL.s && e.y >= DIAL.y && e.y < DIAL.y+DIAL.s && isMusicActive) musicTogglePlay();
   // tap on the messages: open the messages app
-  if (e.y > 130) require("messages").openGUI();
+  if (e.y >= CARDS_Y) require("messages").openGUI();
 });
 
 Bangle.on('drag', function(e) {
