@@ -7,7 +7,7 @@ A clock face for Bangle.js 2.
 * Time (24h), ISO week number, day of the year and a bar showing how much of the day has passed.
 * Day of week, date (day.month) and battery level.
 * Seconds dial (updated every second), inspired by the Seiko MGS5 watch.
-* Status icon in the centre of the dial: Bluetooth disconnected, locked, or music play/pause.
+* Status plate in the centre of the dial: LINK (Bluetooth disconnected), LOCK (locked), PLAY or HOLD (music).
 * The last text messages as three cards, one per conversation: app icon, number of messages, sender and the start of the last message.
   WhatsApp counts such as (2 messages) are ignored. A WhatsApp group chat (Family: Bob) is one line (Family).
 * Music: the track across the top of the screen, the artist next to the dial. Long names end with "...".

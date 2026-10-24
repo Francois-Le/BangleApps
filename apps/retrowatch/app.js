@@ -3,10 +3,6 @@ require("Font5x9Numeric7Seg").add(Graphics);
 require("Font8x12").add(Graphics);
 require("Font8x16").add(Graphics);
 
-const lock_img = require("heatshrink").decompress(atob("mMxgP/ACX+gAFD/EAh4FC+EAEQYFBgF/AoPgAoISC8EH+EDAoUf/4lC+AFB4AYB+E/FgIIBAoX+g4ID/4eBAofA//8AoXwv/+GYX4n4aCB4IJBAoQDCwYFCAYPBAoQDB8AFCAYImBFQYmBFQZmCAAMDOQQABgKEBAAf8Aol+Aok/AokfwAFDh/AAocHGH4wbToQAIwA="));
-const play_img = require("heatshrink").decompress(atob("mMxgP/+//AAf5Aon8v4FD/0fBgkHAomBAonADAngDAnwDAn4HIIwDgAYD/0ADAkADAmADAnADAngDAnwDAn4gAYDGAIYDGAIYEAoIYDwAYEGAIYDGAIYDGAIYDGAIFDGAQFCGAQqDGA4FDGAIFDGAIFDMI4FDGAIFDGAKMESQwFE4AFE8AFEYYwFE/gFE/zuFAouHAonHAonnAon3I4g"));
-const pause_img = require("heatshrink").decompress(atob("mMxgP/ACUD/+BAoQDB4AFCAYPgv4FBAYPwn4FBAYP4j4FBAYP8h4FBAYP+g4FBAYQsBGH4w/GH4wXACGAA=="));
-const bluetooth_img = atob("MTEB////////////////////////////x///////wf//////4H//////8B//////+Af//////AH//////hB//////wwf/////4cH/////8PB////z+Hwf///w/D8H///4Ph/D///+Dw+D////g4eD////4MOD////+CGD/////gCD/////4AD/////+AD//////gD//////4D//////8B//////8Af/////8AH/////8AB/////8AQf////8EMH////8GHB////8HDwf///8Hh8H///8Hw/B///+H4fg////n8Pg/////+Hg//////Dg//////hg//////wg//////4A//////8A//////+A///////A///////g///////4////////////////////gA==");
 
 
 // ---- Layout ----
@@ -22,15 +18,6 @@ var musicArtist = "";
 var drawTimeout;
 var musicIdleTimeout;
 
-/** Same image, with colour 0 transparent (so the icon is drawn on the dial without a box) */
-function transparent(img) {
-  var s = E.toString(img);
-  return String.fromCharCode(s.charCodeAt(0), s.charCodeAt(1), s.charCodeAt(2)|128, 1) + s.substr(3);
-}
-const ICONS = {
-  lock: transparent(lock_img), play: transparent(play_img),
-  pause: transparent(pause_img), bt: transparent(bluetooth_img)
-};
 
 /** Cut text to fit width w, ending with "..." when it doesn't fit (uses the current font) */
 function ellipsis(t, w) {
@@ -78,6 +65,35 @@ function currentIcon() {
   if (isMusicActive) return isMusicPlaying ? "play" : "pause";
 }
 
+// ---- Status plate in the centre of the dial: octagon, small symbol, label ----
+const STATUS = {
+  play:  {col:"#0ff", lab:"PLAY"},
+  pause: {col:"#0ff", lab:"HOLD"},
+  lock:  {col:"#ff0", lab:"LOCK"},
+  bt:    {col:"#f00", lab:"LINK"}
+};
+function drawStatus(st) {
+  var cx = DCX, cy = DCY, s = 15, k = 5, c = STATUS[st].col;
+  var oct = function(d){ return [cx-s+k+d,cy-s+d, cx+s-k-d,cy-s+d, cx+s-d,cy-s+k+d, cx+s-d,cy+s-k-d,
+                                 cx+s-k-d,cy+s-d, cx-s+k+d,cy+s-d, cx-s+d,cy+s-k-d, cx-s+d,cy-s+k+d]; };
+  g.setColor(c).fillPoly(oct(0)).setColor(0,0,0).fillPoly(oct(1));
+  var y = cy-3;
+  g.setColor(c);
+  if (st == "play") g.fillPoly([cx-3,y-5, cx-3,y+5, cx+5,y]);
+  else if (st == "pause") g.fillRect(cx-4,y-5,cx-2,y+5).fillRect(cx+2,y-5,cx+4,y+5);
+  else if (st == "lock") {
+    g.fillCircle(cx, y-2, 4).setColor(0,0,0).fillCircle(cx, y-2, 2).fillRect(cx-4, y-2, cx+4, y);
+    g.setColor(c).fillRect(cx-4, y, cx+4, y+5).setColor(0,0,0).fillRect(cx, y+2, cx, y+3);
+  } else if (st == "bt") {
+    // bluetooth rune (1px lines), crossed out by a slash with a black edge
+    g.drawLine(cx,y-5, cx,y+5).drawLine(cx,y-5, cx+3,y-2).drawLine(cx+3,y-2, cx-3,y+3)
+     .drawLine(cx,y+5, cx+3,y+2).drawLine(cx+3,y+2, cx-3,y-3);
+    g.setColor(0,0,0).drawLine(cx-6,y+5, cx+5,y-6).drawLine(cx-5,y+6, cx+6,y-5);
+    g.setColor(c).drawLine(cx-6,y+6, cx+6,y-6);
+  }
+  g.setColor(1,1,0).setBgColor(0,0,0).setFont("4x6").setFontAlign(0,-1).drawString(STATUS[st].lab, cx+1, cy+6).setFontAlign(-1,-1);
+}
+
 function drawDial(sec) {
   g.reset().setColor(0,1,1).setBgColor(0,0,0);
   g.drawImage(dialImg, DIAL.x, DIAL.y);
@@ -86,11 +102,7 @@ function drawDial(sec) {
   var p = tickPixels(sec, 19, 34, 1);
   for (var i=0; i<p.length; i+=2) g.setPixel(DCX+p[i], DCY+p[i+1]);
   var icon = currentIcon();
-  if (icon) {
-    // the icon shapes are colour 0 of the image, which is drawn with the background colour
-    g.setBgColor(icon=="bt" ? "#f00" : "#0ff");
-    g.drawImage(ICONS[icon], DCX-14, DCY-14, {scale:0.6});
-  }
+  if (icon) drawStatus(icon);
 }
 
 // ---- Time panel and info bar, "mission clock" style (redrawn once a minute) ----
