@@ -9,3 +9,4 @@
 0.09: New "mission clock" time panel (week number, day of the year, day progress bar) and info bar (day, date, battery %); time now shows a leading zero
 0.10: Seconds dial inverted to match the other panels: black face, cyan frame and ticks, yellow pointer, cyan icons
 0.11: Messages shown as three cards (app icon, unread count, sender, start of the last message); shorter day/date/battery panel; 1px gaps between panels
+0.12: New status plate in the centre of the dial: octagon with a small symbol and a label (PLAY / HOLD / LOCK / LINK), replaces the large icons
