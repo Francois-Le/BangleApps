@@ -7,3 +7,4 @@
 0.07: At night the sun bar becomes a night bar (sunset to next sunrise) with a moon
 0.08: Rain graph uses the whole height of its box; removed the MAX label
 0.09: New "mission clock" time panel (week number, day of the year, day progress bar) and info bar (day, date, battery %); time now shows a leading zero
+0.10: Seconds dial inverted to match the other panels: black face, cyan frame and ticks, yellow pointer, cyan icons
