@@ -1,6 +1,5 @@
 // Retro Watch - clock face with a seconds dial, messages and music controls
 require("Font5x9Numeric7Seg").add(Graphics);
-require("Font7x11Numeric7Seg").add(Graphics);
 require("Font8x12").add(Graphics);
 require("Font8x16").add(Graphics);
 
@@ -9,8 +8,6 @@ const play_img = require("heatshrink").decompress(atob("mMxgP/+//AAf5Aon8v4FD/0f
 const pause_img = require("heatshrink").decompress(atob("mMxgP/ACUD/+BAoQDB4AFCAYPgv4FBAYPwn4FBAYP4j4FBAYP8h4FBAYP+g4FBAYQsBGH4w/GH4wXACGAA=="));
 const bluetooth_img = atob("MTEB////////////////////////////x///////wf//////4H//////8B//////+Af//////AH//////hB//////wwf/////4cH/////8PB////z+Hwf///w/D8H///4Ph/D///+Dw+D////g4eD////4MOD////+CGD/////gCD/////4AD/////+AD//////gD//////4D//////8B//////8Af/////8AH/////8AB/////8AQf////8EMH////8GHB////8HDwf///8Hh8H///8Hw/B///+H4fg////n8Pg/////+Hg//////Dg//////hg//////wg//////4A//////8A//////+A///////A///////g///////4////////////////////gA==");
 
-// Background: the info bar (day / date / battery) at y=95..127
-const bg_img = require("heatshrink").decompress(atob("2Gw4n//8HEbsRAH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4AYiEAAH4AQgJW/LDRC/ACqu/WDBX/K65A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/iIA/ACx1diAbagLN6K/5X/K/5X/K5EBiJX/K6yyZK/w+YK/5XcgLOYDYYdYK8ERK7EBiIAED6pXCHDI8EK+8RczKuDDzIAcRrBXFSYQeZV7hXdGy4eEdYIBEK6ztDK66SCK/5XUcwTOaDoQACK66RZgI5FD66veiBX/K6o7CK7ADCK4QeYOoh2WK4I+EK647CZzKvdK74dXK7w2YK4iuaOYYADK+wfaADbHBHwZXXSQJ3bK/ZW2K4IBBSTBXCV25XeAHJUBHrJXdZTpX4gJX/Di8RZvBXciMRWDhX3VwJYdK+xWDAH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4A/AH4AW"));
 
 // ---- Layout ----
 const DIAL = {x:0, y:19, s:75};          // seconds dial, 75x75 so it has an exact centre pixel
@@ -95,33 +92,53 @@ function drawDial(sec) {
   }
 }
 
-// ---- Time and info bar (once a minute) ----
-function drawTime(d) {
-  var l = require("locale");
-  var time = (" "+d.getHours()).substr(-2) + ":" + d.getMinutes().toString().padStart(2,0);
-  g.reset().setColor(0,1,1).fillRect({x:TIME.x, y:TIME.y, x2:TIME.x2, y2:TIME.y2, r:8});
-  g.setColor(0,0,0).setBgColor(0,1,1);
-  g.setFont("5x9Numeric7Seg",3).drawString(time, 88, 56);
+// ---- Time panel and info bar, "mission clock" style (redrawn once a minute) ----
+function isoWeek(d) {
+  var t = new Date(d.getFullYear(), d.getMonth(), d.getDate()+3-((d.getDay()+6)%7));
+  var f = new Date(t.getFullYear(), 0, 4);
+  return 1+Math.round(((t.getTime()-f.getTime())/86400000-3+((f.getDay()+6)%7))/7);
+}
+function dayOfYear(d) {
+  return Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()-new Date(d.getFullYear(), 0, 1).getTime())/86400000)+1;
+}
+function frame(x, y, x2, y2) {   // cyan rounded frame, black inside
+  g.setColor(0,1,1).fillRect({x:x, y:y, x2:x2, y2:y2, r:6});
+  g.setColor(0,0,0).fillRect({x:x+1, y:y+1, x2:x2-1, y2:y2-1, r:5});
+}
+function dotsH(x1, x2, y) { for (var x=x1; x<=x2; x+=2) g.setPixel(x, y); }
+function dotsV(x, y1, y2) { for (var y=y1; y<=y2; y+=2) g.setPixel(x, y); }
 
-  g.setFont("8x12", 2);
-  g.drawString(l.dow(d,1), 20, 100, true);
-  g.drawString(""+d.getDate(), 81, 103, true);
-  g.setFont("6x8", 1);
-  g.drawString(l.month(d,1), 84, 96, true);
-  // battery: right-aligned (so "100" fits), area cleared first so no old digits remain
-  // the cell is x=118..175; the lightning bolt ends at x=130, so the digits use x=133..173
-  g.clearRect(132, 101, 174, 122);
-  g.setFont("7x11Numeric7Seg",2).setFontAlign(1,-1);
-  g.drawString(E.getBattery(), 174, 101);
-  g.setFontAlign(-1,-1);
+function drawTime(d) {
+  var l = require("locale"), h = d.getHours(), m = d.getMinutes();
+  var time = ("0"+h).substr(-2) + ":" + ("0"+m).substr(-2);   // leading zero keeps the time centred
+  g.reset().setBgColor(0,0,0);
+  // time panel: label, week number and day of year, time, day progress bar
+  frame(TIME.x, TIME.y, TIME.x2, TIME.y2);
+  g.setFont("4x6").setFontAlign(-1,-1).setColor(1,1,0).drawString("LOCAL", 81, 49);
+  g.setColor(0,1,1).setFontAlign(1,-1).drawString("WK "+isoWeek(d)+"  DAY "+dayOfYear(d), 171, 49);
+  g.setFont("5x9Numeric7Seg",3).setFontAlign(0,-1).drawString(time, 126, 57);
+  var ex = 80+Math.round((h*60+m)/1440*91);
+  dotsH(80, 171, 88);
+  g.fillRect(80, 87, ex, 89).setColor(1,1,0).fillRect(ex-1, 86, ex+1, 90);
+  // info bar: day | date | battery
+  frame(0, 95, 175, 127);
+  g.setColor(0,1,1);
+  dotsV(60, 98, 124); dotsV(118, 98, 124); dotsH(3, 172, 105);
+  g.setFont("4x6").setFontAlign(-1,-1).setColor(1,1,0)
+   .drawString("DAY", 6, 98).drawString("DATE", 64, 98).drawString("PWR", 122, 98);
+  var bat = E.getBattery();
+  g.setColor(0,1,1).setFont("8x16")
+   .drawString(l.dow(d,1).toUpperCase(), 6, 108)
+   .drawString(("0"+d.getDate()).substr(-2)+"."+("0"+(d.getMonth()+1)).substr(-2), 64, 108)
+   .drawString(bat+"%", 122, 108);
+  // small battery icon, filled to the battery level
+  var fh = Math.round(13*bat/100);
+  g.drawRect(163, 110, 170, 124).fillRect(165, 108, 168, 109);
+  if (fh > 0) g.fillRect(165, 123-fh, 168, 122);
 }
 
 function drawBackground() {
   g.reset().setBgColor(0,0,0).clear();
-  g.drawImage(bg_img, 0, 0);
-  g.setColor(0,0,0).fillRect(0, 0, 175, 94);
-  // round the top corners of the info bar (same shape as its bottom corners)
-  [5,3,2,1,1].forEach(function(n,i){ g.fillRect(0,95+i,n-1,95+i); g.fillRect(176-n,95+i,175,95+i); });
 }
 
 // ---- Weather panel (shown in the music area when no music is playing) ----
