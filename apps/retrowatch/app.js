@@ -58,12 +58,12 @@ function tickPixels(s, rIn, rOut, thick) {
   return pts;
 }
 
-// The static dial (rounded square + 60 ticks) is drawn once into a 1 bit image:
-// 0 = cyan face, 1 = black (ticks and the corners outside the rounded square)
+// The static dial (frame + 60 ticks) is drawn once into a 1 bit image:
+// 0 = black face, 1 = cyan (1px rounded frame and ticks)
 var dialImg = (function() {
   var b = Graphics.createArrayBuffer(DIAL.s, DIAL.s, 1, {msb:true});
-  b.setColor(1).fillRect(0, 0, DIAL.s-1, DIAL.s-1);
-  b.setColor(0).fillRect({x:0, y:0, x2:DIAL.s-1, y2:DIAL.s-1, r:11});
+  b.setColor(1).fillRect({x:0, y:0, x2:DIAL.s-1, y2:DIAL.s-1, r:11});
+  b.setColor(0).fillRect({x:1, y:1, x2:DIAL.s-2, y2:DIAL.s-2, r:10});
   b.setColor(1);
   for (var s=0; s<60; s++) {
     var p = s%5==0 ? tickPixels(s, 26, 34, 1) : tickPixels(s, 30, 34, 0);
@@ -79,15 +79,16 @@ function currentIcon() {
 }
 
 function drawDial(sec) {
-  g.reset().setColor(0,0,0).setBgColor(0,1,1);
+  g.reset().setColor(0,1,1).setBgColor(0,0,0);
   g.drawImage(dialImg, DIAL.x, DIAL.y);
-  // pointer: a long bold tick on the current second
+  // pointer: a long bold yellow tick on the current second
+  g.setColor(1,1,0);
   var p = tickPixels(sec, 19, 34, 1);
   for (var i=0; i<p.length; i+=2) g.setPixel(DCX+p[i], DCY+p[i+1]);
   var icon = currentIcon();
   if (icon) {
     // the icon shapes are colour 0 of the image, which is drawn with the background colour
-    g.setBgColor(icon=="bt" ? "#f00" : "#000");
+    g.setBgColor(icon=="bt" ? "#f00" : "#0ff");
     g.drawImage(ICONS[icon], DCX-14, DCY-14, {scale:0.6});
   }
 }
