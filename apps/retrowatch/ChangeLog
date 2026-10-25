@@ -12,3 +12,4 @@
 0.12: New status plate in the centre of the dial: octagon with a small symbol and a label (PLAY / HOLD / LOCK / LINK), replaces the large icons
 0.13: Date bar redesigned: labels in the top border, larger values, day of the month and 3 letter month in separate cells
 0.14: Lower battery use: seconds pointer pre-rendered, only the rows of the moving pointer are sent to the screen each second, weather files read only when new weather arrives
+0.15: Faster startup: the dial and seconds pointer images are pre-rendered (dial.bin) instead of computed when the clock loads

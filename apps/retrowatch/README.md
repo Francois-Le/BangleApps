@@ -28,3 +28,8 @@ A clock face for Bangle.js 2.
 
 * `app.js`: the clock face.
 * `app-icon.js`, `app.png`: launcher and App Loader icons.
+
+## Development
+
+The seconds dial and the 60 pointer images are pre-rendered into `dial.bin` so the watch
+doesn't compute them at startup. After changing the dial, run `node tools/make-dial.js`.
