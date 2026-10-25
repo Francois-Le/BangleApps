@@ -36,6 +36,9 @@ GB({t:"nav",src:"maps",title:"Navigation",instr:"High St towards Tollgate Rd",di
 require("messages").pushMessage({"t":"add","id":"call","src":"Phone","title":"Bob","body":"12421312",positive:true,negative:true})
 */
 var Layout = require("Layout");
+/* Globals present before this app ran: everything else this app defines is deleted
+ on exit, so the clock can be fast-loaded without leaking memory. */
+var RMG_GLOBALS = Object.keys(global);
 require("Font8x16").add(Graphics);
 require("Font8x12").add(Graphics);
 require("Font7x11Numeric7Seg").add(Graphics);
@@ -46,7 +49,8 @@ var reply;
 try { reply = require("reply"); } catch (e) {}
 
 // Retro Watch colors. The theme is used by menus, prompts, widgets and the music/map screens.
-// load() resets it.
+// Restored (savedTheme) when going back to the clock.
+var savedTheme = g.theme;
 g.setTheme({fg:"#0ff", bg:"#000", fg2:"#000", bg2:"#0ff", fgH:"#000", bgH:"#0ff", fgW:"#0ff", bgW:"#000", dark:true});
 
 var fontList = g.getFonts();
@@ -95,10 +99,11 @@ if (Bangle.MESSAGES_KILL_HANDLER) {
   E.removeListener("kill", Bangle.MESSAGES_KILL_HANDLER);
   delete Bangle.MESSAGES_KILL_HANDLER;
 }
-E.on("kill", function() { // now ensure we write messages on exit
+var onKill = function() { // now ensure we write messages on exit
   // if we write the exact same data it's ok - Bangle.js won't create a new file
   require("messages").write(MESSAGES, true/*force*/);
-});
+};
+E.on("kill", onKill);
 
 // <grouping> Pure functions, also loaded by test/grouping.test.js
 var MAX_GROUP_MSGS = 40; // only the newest messages are merged (limits memory)
@@ -917,9 +922,9 @@ function checkMessages(options) {
       title:/*LANG*/"Messages",
       img:require("heatshrink").decompress(atob("kkk4UBrkc/4AC/tEqtACQkBqtUDg0VqAIGgoZFDYQIIM1sD1QAD4AIBhnqA4WrmAIBhc6BAWs8AIBhXOBAWz0AIC2YIC5wID1gkB1c6BAYFBEQPqBAYXBEQOqBAnDAIQaEnkAngaEEAPDFgo+IKA5iIOhCGIAFb7RqAIGgtUBA0VqobFgNVA")),
       buttons : {/*LANG*/"Ok":1},
-      back: () => load()
-    }).then(() => load());
-    return load();
+      back: () => exitToClock()
+    }).then(() => exitToClock());
+    return;
   }
   // we have >0 messages
   var newMessages = MESSAGES.filter(m=>m.new&&m.id!="music");
@@ -942,7 +947,7 @@ function checkMessages(options) {
     return showMessage('music', true);
   // no new messages - go to clock?
   if (options.clockIfAllRead && newMessages.length==0)
-    return load();
+    return exitToClock();
   active = "list";
   // Otherwise show a list of messages (merged messages are one item)
   E.showScroller({
@@ -998,7 +1003,7 @@ function checkMessages(options) {
       var grp = groupAt(idx);
       if (grp) showMessage(grp.msgs[0].id, true);
     },
-    back : () => load()
+    back : () => exitToClock()
   });
 }
 
@@ -1014,6 +1019,37 @@ function returnToClockIfEmpty() {
   checkMessages({clockIfNoMsg:1,clockIfAllRead:0,ignoreUnread:1,openMusic});
 }
 
+/** Go back to the clock. Frees everything this app allocated (timers, listeners, the
+ kill handler) and uses Bangle.showClock(), which fast-loads the clock when the clock
+ supports it, instead of a full reset with load(). */
+function exitToClock() {
+  if (exiting) return;
+  exiting = true;
+  cancelReloadTimeout();
+  if (redrawMsgInterval) clearInterval(redrawMsgInterval);
+  if (headerTimeout) clearTimeout(headerTimeout);
+  redrawMsgInterval = headerTimeout = undefined;
+  // This setUI first runs the remove handler of the screen on show (removing its listeners).
+  // Bangle.showClock() -> Bangle.load() then runs the remove handler below, which frees the
+  // rest of the app, and fast-loads the clock.
+  Bangle.setUI({mode:"custom", remove:function() {
+    Bangle.removeListener("message", onMessagesModified);
+    Bangle.removeListener("lock", onLock);
+    E.removeListener("kill", onKill);
+    require("messages").write(MESSAGES, true/*force*/); // what the kill handler did
+    require("messages").toggleWidget(true);
+    delete Graphics.prototype.setFont8x16;
+    delete Graphics.prototype.setFont8x12;
+    delete Graphics.prototype.setFont7x11Numeric7Seg;
+    g.setTheme(savedTheme);
+    var keep = RMG_GLOBALS;
+    Object.keys(global).forEach(function(k) { if (keep.indexOf(k)<0 && k!="BUZZ_ON_NEW_MESSAGE") delete global[k]; });
+    delete global.RMG_GLOBALS;
+  }});
+  Bangle.showClock();
+}
+var exiting = false;
+
 function cancelReloadTimeout() {
   if (!unreadTimeout) return;
   clearTimeout(unreadTimeout);
@@ -1024,7 +1060,7 @@ function resetReloadTimeout(){
   cancelReloadTimeout();
   if (!isFinite(settings.unreadTimeout)) settings.unreadTimeout=60;
   if (settings.unreadTimeout)
-    unreadTimeout = setTimeout(load, settings.unreadTimeout*1000);
+    unreadTimeout = setTimeout(exitToClock, settings.unreadTimeout*1000);
 }
 
 g.clear();
@@ -1044,7 +1080,8 @@ setTimeout(() => {
 
 /* If the Bangle is unlocked by the user, treat that
 as a queue to stop repeated buzzing */
-Bangle.on('lock',locked => {
+var onLock = function(locked) {
   if (!locked)
     require("messages").stopBuzz();
-});
+};
+Bangle.on('lock', onLock);

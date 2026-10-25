@@ -13,3 +13,4 @@
 0.13: Date bar redesigned: labels in the top border, larger values, day of the month and 3 letter month in separate cells
 0.14: Lower battery use: seconds pointer pre-rendered, only the rows of the moving pointer are sent to the screen each second, weather files read only when new weather arrives
 0.15: Faster startup: the dial and seconds pointer images are pre-rendered (dial.bin) instead of computed when the clock loads
+0.16: Fast loading: the clock frees everything when another app opens, and loads widgets (hidden), so apps open and return to the clock without a full restart
