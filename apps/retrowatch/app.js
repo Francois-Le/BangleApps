@@ -341,6 +341,17 @@ let snapColor = function(c) {
 
 /** Message cards: one card per conversation (newest first), y=121..175 */
 const CARDS_Y = 121;
+/** Age of a message: "now", "4m", "2h", "3d" (undefined if the message has no date) */
+let msgAge = function(d) {
+  if (d === undefined) return;
+  var t = "number"==typeof d ? d : new Date(d).getTime();
+  if (!isFinite(t)) return;
+  var m = Math.floor((Date.now()-t)/60000);
+  if (m < 1) return "now";
+  if (m < 60) return m+"m";
+  if (m < 1440) return Math.floor(m/60)+"h";
+  return Math.floor(m/1440)+"d";
+};
 let updateMessages = function(message)
 {
   g.reset().setBgColor(0,0,0).clearRect(0, CARDS_Y, 175, 175);
@@ -359,7 +370,8 @@ let updateMessages = function(message)
       body: m.body || "",
       img: require("messageicons").getImage(m),
       col: snapColor(require("messageicons").getColor(m, {default:"#0ff"})),
-      count: 1
+      count: 1,
+      date: m.date   // the newest message of the conversation comes first
     });
   }
   for (var i=0; i<3 && i<entries.length; i++)
@@ -367,10 +379,8 @@ let updateMessages = function(message)
     var e = entries[i], x = i*59, x2 = x+57, y = CARDS_Y;
     frame(x, y, x2, 175, 5);
     g.setColor(e.col).setBgColor(0,0,0).drawImage(e.img, x+4, y+4, {scale:0.5});
-    if (e.count > 1) {   // unread count badge
-      g.setColor(1,1,0).fillRect({x:x2-15, y:y+4, x2:x2-4, y2:y+13, r:3});
-      g.setColor(0,0,0).setFont("4x6").setFontAlign(0,-1).drawString(e.count, x2-9, y+6).setFontAlign(-1,-1);
-    }
+    var age = msgAge(e.date);   // age of the newest message, plain yellow text
+    if (age) g.setColor(1,1,0).setBgColor(0,0,0).setFont("6x8").setFontAlign(1,-1).drawString(age, x2-4, y+4).setFontAlign(-1,-1);
     g.setColor(0,1,1).setFont("6x8").drawString(ellipsis(e.msg, 50), x+4, y+19);
     // start of the last message, 3 lines, "..." if longer
     g.setFont("4x6").setColor(1,1,1);
@@ -388,6 +398,7 @@ let tick = function() {
   if (d.getMinutes() != lastMinute) {
     lastMinute = d.getMinutes();
     drawTime(d);
+    updateMessages();   // refresh the message ages
     if (!isMusicActive && lastMinute%5 == 0) drawMusicInfo();
   }
   drawDial(d.getSeconds(), true);

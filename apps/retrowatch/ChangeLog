@@ -14,3 +14,4 @@
 0.14: Lower battery use: seconds pointer pre-rendered, only the rows of the moving pointer are sent to the screen each second, weather files read only when new weather arrives
 0.15: Faster startup: the dial and seconds pointer images are pre-rendered (dial.bin) instead of computed when the clock loads
 0.16: Fast loading: the clock frees everything when another app opens, and loads widgets (hidden), so apps open and return to the clock without a full restart
+0.17: Message cards show the age of the newest message (now, 4m, 2h, 3d) instead of the message count; ages refresh every minute
