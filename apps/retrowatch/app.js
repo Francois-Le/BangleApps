@@ -26,38 +26,13 @@ function ellipsis(t, w) {
   return t.trim()+"...";
 }
 
-// ---- Seconds dial ----
-// Ticks for 0..7 s are rasterised once, every other second is an exact mirror/rotation
-// of them, so all 60 ticks have the same shape and the dial is pixel-symmetric.
-function tickPixels(s, rIn, rOut, thick) {
-  s = (s+60)%60;
-  var q = Math.floor(s/15), r = s%15, base = r<=7 ? r : 15-r;
-  var k = Math.tan(base*Math.PI/30), pts = [];
-  for (var y=rIn; y<=rOut; y++) {
-    var x = Math.round(y*k);
-    for (var o=-thick; o<=thick; o++) {
-      var px = x+o, py = -y;
-      if (r>7) { var t = px; px = -py; py = -t; }          // mirror on the diagonal
-      for (var i=0; i<q; i++) { var u = px; px = -py; py = u; } // rotate 90 deg clockwise
-      pts.push(px, py);
-    }
-  }
-  return pts;
-}
 
-// The static dial (frame + 60 ticks) is drawn once into a 1 bit image:
-// 0 = black face, 1 = cyan (1px rounded frame and ticks)
-var dialImg = (function() {
-  var b = Graphics.createArrayBuffer(DIAL.s, DIAL.s, 1, {msb:true});
-  b.setColor(1).fillRect({x:0, y:0, x2:DIAL.s-1, y2:DIAL.s-1, r:11});
-  b.setColor(0).fillRect({x:1, y:1, x2:DIAL.s-2, y2:DIAL.s-2, r:10});
-  b.setColor(1);
-  for (var s=0; s<60; s++) {
-    var p = s%5==0 ? tickPixels(s, 26, 34, 1) : tickPixels(s, 30, 34, 0);
-    for (var i=0; i<p.length; i+=2) b.setPixel(37+p[i], 37+p[i+1]);
-  }
-  return b.asImage("string");
-})();
+// The dial (frame + 60 ticks, 75x75 1 bpp) and the 60 seconds-pointer images are
+// pre-rendered by tools/make-dial.js into retrowatch.dial.bin, so nothing is computed at startup.
+// Format: dial image, then per second [x, y, y2 (int8, from the dial centre), len, image].
+var dialBin = require("Storage").read("retrowatch.dial.bin");
+var dialImg = dialBin.substr(0, 3+Math.ceil(DIAL.s*DIAL.s/8));
+
 
 function currentIcon() {
   if (!NRF.getSecurityStatus().connected) return "bt";
@@ -94,22 +69,15 @@ function drawStatus(st) {
   g.setColor(1,1,0).setBgColor(0,0,0).setFont("4x6").setFontAlign(0,-1).drawString(STATUS[st].lab, cx+1, cy+6).setFontAlign(-1,-1);
 }
 
-// The pointer for each second is pre-rendered once into a small 1 bit image (with its
-// position and the rows it covers), so drawing it each second is a single drawImage.
 var POINTER = [];
 (function() {
-  for (var s=0; s<60; s++) {
-    var p = tickPixels(s, 19, 34, 1), x1=99, y1=99, x2=-99, y2=-99, i;
-    for (i=0; i<p.length; i+=2) {
-      if (p[i]<x1) x1=p[i]; if (p[i]>x2) x2=p[i]; if (p[i+1]<y1) y1=p[i+1]; if (p[i+1]>y2) y2=p[i+1];
-    }
-    var b = Graphics.createArrayBuffer(x2-x1+1, y2-y1+1, 1, {msb:true});
-    b.setColor(1);
-    for (i=0; i<p.length; i+=2) b.setPixel(p[i]-x1, p[i+1]-y1);
-    var img = E.toString(b.asImage("string"));
-    // colour 0 transparent, so only the pointer pixels are drawn
-    img = String.fromCharCode(img.charCodeAt(0), img.charCodeAt(1), img.charCodeAt(2)|128, 0) + img.substr(3);
-    POINTER.push({img:img, x:DCX+x1, y:DCY+y1, y2:DCY+y2});
+  var o = dialImg.length;
+  for (var sec=0; sec<60; sec++) {
+    var i8 = function(v){ return v>127 ? v-256 : v; };
+    var len = dialBin.charCodeAt(o+3);
+    POINTER.push({img:dialBin.substr(o+4, len), x:DCX+i8(dialBin.charCodeAt(o)),
+                  y:DCY+i8(dialBin.charCodeAt(o+1)), y2:DCY+i8(dialBin.charCodeAt(o+2))});
+    o += 4+len;
   }
 })();
 
