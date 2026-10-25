@@ -94,15 +94,42 @@ function drawStatus(st) {
   g.setColor(1,1,0).setBgColor(0,0,0).setFont("4x6").setFontAlign(0,-1).drawString(STATUS[st].lab, cx+1, cy+6).setFontAlign(-1,-1);
 }
 
-function drawDial(sec) {
+// The pointer for each second is pre-rendered once into a small 1 bit image (with its
+// position and the rows it covers), so drawing it each second is a single drawImage.
+var POINTER = [];
+(function() {
+  for (var s=0; s<60; s++) {
+    var p = tickPixels(s, 19, 34, 1), x1=99, y1=99, x2=-99, y2=-99, i;
+    for (i=0; i<p.length; i+=2) {
+      if (p[i]<x1) x1=p[i]; if (p[i]>x2) x2=p[i]; if (p[i+1]<y1) y1=p[i+1]; if (p[i+1]>y2) y2=p[i+1];
+    }
+    var b = Graphics.createArrayBuffer(x2-x1+1, y2-y1+1, 1, {msb:true});
+    b.setColor(1);
+    for (i=0; i<p.length; i+=2) b.setPixel(p[i]-x1, p[i+1]-y1);
+    var img = E.toString(b.asImage("string"));
+    // colour 0 transparent, so only the pointer pixels are drawn
+    img = String.fromCharCode(img.charCodeAt(0), img.charCodeAt(1), img.charCodeAt(2)|128, 0) + img.substr(3);
+    POINTER.push({img:img, x:DCX+x1, y:DCY+y1, y2:DCY+y2});
+  }
+})();
+
+var lastIcon, lastSec = -1;
+/** Draw the dial. With partial=true (the per-second update) and no icon change, only the
+ rows of the old and new pointer are redrawn, so less of the screen is sent to the LCD. */
+function drawDial(sec, partial) {
+  var icon = currentIcon();
   g.reset().setColor(0,1,1).setBgColor(0,0,0);
+  if (partial && icon === lastIcon && lastSec >= 0) {
+    var a = POINTER[lastSec], b = POINTER[sec];
+    g.setClipRect(DIAL.x, Math.min(a.y, b.y), DIAL.x+DIAL.s-1, Math.max(a.y2, b.y2));
+  }
   g.drawImage(dialImg, DIAL.x, DIAL.y);
   // pointer: a long bold yellow tick on the current second
-  g.setColor(1,1,0);
-  var p = tickPixels(sec, 19, 34, 1);
-  for (var i=0; i<p.length; i+=2) g.setPixel(DCX+p[i], DCY+p[i+1]);
-  var icon = currentIcon();
+  var pt = POINTER[sec];
+  g.setColor(1,1,0).drawImage(pt.img, pt.x, pt.y);
   if (icon) drawStatus(icon);
+  g.setClipRect(0, 0, g.getWidth()-1, g.getHeight()-1);
+  lastIcon = icon; lastSec = sec;
 }
 
 // ---- Time panel and info bar, "mission clock" style (redrawn once a minute) ----
@@ -169,10 +196,16 @@ function drawBackground() {
 var weatherLib;
 try { weatherLib = require("weather"); } catch (e) {}
 
+// The weather files are read only when new weather arrives (the "update2" event),
+// not every 5 minutes; the rain graph start is recomputed from the cached data.
+var weatherRaw, weatherRead = false;
 function getWeather() {
   if (!weatherLib) return;
-  var w;
-  try { w = weatherLib.getWeather(true); } catch (e) { return; }
+  if (!weatherRead) {
+    weatherRead = true;
+    try { weatherRaw = weatherLib.getWeather(true); } catch (e) { weatherRaw = undefined; }
+  }
+  var w = weatherRaw;
   if (!w || w.temp === undefined) return;
   var r = {
     temp: Math.round(w.v==2 ? w.temp : w.temp-273),   // v1 is in Kelvin
@@ -388,7 +421,7 @@ function tick() {
     drawTime(d);
     if (!isMusicActive && lastMinute%5 == 0) drawMusicInfo();
   }
-  drawDial(d.getSeconds());
+  drawDial(d.getSeconds(), true);
   if (drawTimeout) clearTimeout(drawTimeout);
   drawTimeout = setTimeout(function(){ drawTimeout = undefined; tick(); }, 1000 - (Date.now() % 1000));
 }
@@ -460,7 +493,7 @@ Bangle.on('drag', function(e) {
   }
 });
 
-if (weatherLib) weatherLib.on("update2", function(){ if (!isMusicActive) drawMusicInfo(); });
+if (weatherLib) weatherLib.on("update2", function(){ weatherRead = false; if (!isMusicActive) drawMusicInfo(); });
 Bangle.on('lock', redrawDial);
 NRF.on('connect', redrawDial);
 NRF.on('disconnect', redrawDial);

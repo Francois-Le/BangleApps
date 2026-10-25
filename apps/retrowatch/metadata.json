@@ -3,7 +3,7 @@
   "name": "Retro Watch",
   "shortName": "Retro Watch",
   "author": "Francois-Le",
-  "version": "0.13",
+  "version": "0.14",
   "description": "Clock face with recent messages and music controls (tap to play/pause, swipe for track and volume).",
   "icon": "app.png",
   "type": "clock",
