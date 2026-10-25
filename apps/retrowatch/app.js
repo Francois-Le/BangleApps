@@ -1,3 +1,4 @@
+{
 // Retro Watch - clock face with a seconds dial, messages and music controls
 require("Font5x9Numeric7Seg").add(Graphics);
 require("Font8x12").add(Graphics);
@@ -11,34 +12,34 @@ const DCX = DIAL.x+37, DCY = DIAL.y+37;  // dial centre
 const TIME = {x:76, y:46, x2:175, y2:93}; // time box (1px black gap to the dial and to the info bar)
 const ARTIST_X = 78, ARTIST_W = 175-ARTIST_X;
 
-var isMusicActive = false;
-var isMusicPlaying = false;
-var musicTrack = "";
-var musicArtist = "";
-var drawTimeout;
-var musicIdleTimeout;
+let isMusicActive = false;
+let isMusicPlaying = false;
+let musicTrack = "";
+let musicArtist = "";
+let drawTimeout;
+let musicIdleTimeout;
 
 
 /** Cut text to fit width w, ending with "..." when it doesn't fit (uses the current font) */
-function ellipsis(t, w) {
+let ellipsis = function(t, w) {
   if (g.stringWidth(t) <= w) return t;
   while (t.length && g.stringWidth(t+"...") > w) t = t.slice(0,-1);
   return t.trim()+"...";
-}
+};
 
 
 // The dial (frame + 60 ticks, 75x75 1 bpp) and the 60 seconds-pointer images are
 // pre-rendered by tools/make-dial.js into retrowatch.dial.bin, so nothing is computed at startup.
 // Format: dial image, then per second [x, y, y2 (int8, from the dial centre), len, image].
-var dialBin = require("Storage").read("retrowatch.dial.bin");
-var dialImg = dialBin.substr(0, 3+Math.ceil(DIAL.s*DIAL.s/8));
+let dialBin = require("Storage").read("retrowatch.dial.bin");
+let dialImg = dialBin.substr(0, 3+Math.ceil(DIAL.s*DIAL.s/8));
 
 
-function currentIcon() {
+let currentIcon = function() {
   if (!NRF.getSecurityStatus().connected) return "bt";
   if (Bangle.isLocked()) return "lock";
   if (isMusicActive) return isMusicPlaying ? "play" : "pause";
-}
+};
 
 // ---- Status plate in the centre of the dial: octagon, small symbol, label ----
 const STATUS = {
@@ -47,7 +48,7 @@ const STATUS = {
   lock:  {col:"#ff0", lab:"LOCK"},
   bt:    {col:"#f00", lab:"LINK"}
 };
-function drawStatus(st) {
+let drawStatus = function(st) {
   var cx = DCX, cy = DCY, s = 15, k = 5, c = STATUS[st].col;
   var oct = function(d){ return [cx-s+k+d,cy-s+d, cx+s-k-d,cy-s+d, cx+s-d,cy-s+k+d, cx+s-d,cy+s-k-d,
                                  cx+s-k-d,cy+s-d, cx-s+k+d,cy+s-d, cx-s+d,cy+s-k-d, cx-s+d,cy-s+k+d]; };
@@ -67,9 +68,9 @@ function drawStatus(st) {
     g.setColor(c).drawLine(cx-6,y+6, cx+6,y-6);
   }
   g.setColor(1,1,0).setBgColor(0,0,0).setFont("4x6").setFontAlign(0,-1).drawString(STATUS[st].lab, cx+1, cy+6).setFontAlign(-1,-1);
-}
+};
 
-var POINTER = [];
+let POINTER = [];
 (function() {
   var o = dialImg.length;
   for (var sec=0; sec<60; sec++) {
@@ -81,10 +82,10 @@ var POINTER = [];
   }
 })();
 
-var lastIcon, lastSec = -1;
+let lastIcon, lastSec = -1;
 /** Draw the dial. With partial=true (the per-second update) and no icon change, only the
  rows of the old and new pointer are redrawn, so less of the screen is sent to the LCD. */
-function drawDial(sec, partial) {
+let drawDial = function(sec, partial) {
   var icon = currentIcon();
   g.reset().setColor(0,1,1).setBgColor(0,0,0);
   if (partial && icon === lastIcon && lastSec >= 0) {
@@ -98,26 +99,26 @@ function drawDial(sec, partial) {
   if (icon) drawStatus(icon);
   g.setClipRect(0, 0, g.getWidth()-1, g.getHeight()-1);
   lastIcon = icon; lastSec = sec;
-}
+};
 
 // ---- Time panel and info bar, "mission clock" style (redrawn once a minute) ----
-function isoWeek(d) {
+let isoWeek = function(d) {
   var t = new Date(d.getFullYear(), d.getMonth(), d.getDate()+3-((d.getDay()+6)%7));
   var f = new Date(t.getFullYear(), 0, 4);
   return 1+Math.round(((t.getTime()-f.getTime())/86400000-3+((f.getDay()+6)%7))/7);
-}
-function dayOfYear(d) {
+};
+let dayOfYear = function(d) {
   return Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()-new Date(d.getFullYear(), 0, 1).getTime())/86400000)+1;
-}
-function frame(x, y, x2, y2, r) {   // cyan rounded frame, black inside
+};
+let frame = function(x, y, x2, y2, r) {   // cyan rounded frame, black inside
   r = r || 6;
   g.setColor(0,1,1).fillRect({x:x, y:y, x2:x2, y2:y2, r:r});
   g.setColor(0,0,0).fillRect({x:x+1, y:y+1, x2:x2-1, y2:y2-1, r:r-1});
-}
-function dotsH(x1, x2, y) { for (var x=x1; x<=x2; x+=2) g.setPixel(x, y); }
-function dotsV(x, y1, y2) { for (var y=y1; y<=y2; y+=2) g.setPixel(x, y); }
+};
+let dotsH = function(x1, x2, y) { for (var x=x1; x<=x2; x+=2) g.setPixel(x, y); };
+let dotsV = function(x, y1, y2) { for (var y=y1; y<=y2; y+=2) g.setPixel(x, y); };
 
-function drawTime(d) {
+let drawTime = function(d) {
   var l = require("locale"), h = d.getHours(), m = d.getMinutes();
   var time = ("0"+h).substr(-2) + ":" + ("0"+m).substr(-2);   // leading zero keeps the time centred
   g.reset().setBgColor(0,0,0);
@@ -152,22 +153,22 @@ function drawTime(d) {
   var bat = E.getBattery(), fh = Math.round(11*bat/100);
   g.setColor(0,1,1).drawRect(164, 102, 170, 116).fillRect(166, 100, 168, 101);
   if (fh > 0) g.fillRect(166, 114-fh+1, 168, 114);
-}
+};
 
-function drawBackground() {
+let drawBackground = function() {
   g.reset().setBgColor(0,0,0).clear();
-}
+};
 
 // ---- Weather panel (shown in the music area when no music is playing) ----
 // Data comes from the "weather" app (Gadgetbridge). The rain graph needs
 // Weather app settings -> Data type = "forecast".
-var weatherLib;
+let weatherLib;
 try { weatherLib = require("weather"); } catch (e) {}
 
 // The weather files are read only when new weather arrives (the "update2" event),
 // not every 5 minutes; the rain graph start is recomputed from the cached data.
-var weatherRaw, weatherRead = false;
-function getWeather() {
+let weatherRaw, weatherRead = false;
+let getWeather = function() {
   if (!weatherLib) return;
   if (!weatherRead) {
     weatherRead = true;
@@ -192,10 +193,10 @@ function getWeather() {
     if (r.rain.length < 2) delete r.rain;
   }
   return r;
-}
+};
 
 /** 16x16 icon in the top left corner for an OpenWeatherMap condition code */
-function drawWxIcon(code) {
+let drawWxIcon = function(code) {
   var K="#000", Y="#ff0", W="#fff", C="#0ff";
   function sun(cx, cy, r) {
     g.setColor(Y).fillCircle(cx, cy, r);
@@ -219,11 +220,11 @@ function drawWxIcon(code) {
   else if (grp == 3) { cloud(0, 0, W); g.setColor(C); [[3,11],[7,13],[11,11],[5,15],[9,15]].forEach(function(p){ g.setPixel(p[0],p[1]); }); } // drizzle
   else if (grp == 5) { cloud(0, 0, W); drops(code>=502 ? 4 : 3, code>=502 ? 5 : 4); } // rain / heavy rain
   else sun(7, 7, 4);                                                                   // clear
-}
+};
 
-function hhmm(t) { var d = new Date(t); return ("0"+d.getHours()).substr(-2)+":"+("0"+d.getMinutes()).substr(-2); }
+let hhmm = function(t) { var d = new Date(t); return ("0"+d.getHours()).substr(-2)+":"+("0"+d.getMinutes()).substr(-2); };
 
-function drawWeather() {
+let drawWeather = function() {
   var w = getWeather();
   if (!w) return;
   g.reset().setBgColor(0,0,0).setColor(0,1,1).setFontAlign(-1,-1);
@@ -288,10 +289,10 @@ function drawWeather() {
     if (w.rain[im] > 0) g.fillRect(px(im)-1, py(w.rain[im])-2, px(im)+1, py(w.rain[im])+1);   // peak
     g.setFont("4x6").drawString("RAIN", 80, 20);
   }
-}
+};
 
 // ---- Music: title across the top, artist on the right of the dial ----
-function drawMusicInfo() {
+let drawMusicInfo = function() {
   g.reset().setBgColor(0,0,0).setColor(0,1,1);
   g.clearRect(0, 0, 175, DIAL.y-1);
   g.clearRect(DIAL.x+DIAL.s, DIAL.y, 175, TIME.y-1);
@@ -302,45 +303,45 @@ function drawMusicInfo() {
   if (lines.length > 2) lines = [lines[0], ellipsis(lines.slice(1).join(" "), ARTIST_W)];
   var y = lines.length > 1 ? 20 : 26;
   lines.forEach(function(t, i){ g.drawString(t, ARTIST_X, y+i*12); });
-}
+};
 
 // ---- Music controls ----
 const dragDetectionThreshold = 40;
 const dragDetectionRejectionRatio = 0.3;
-var dragState = {startX:0, startY:0, started:false};
+let dragState = {startX:0, startY:0, started:false};
 
-function musicCmd(n) { Bluetooth.println(JSON.stringify({t:"music", n:n})); }
-function musicTogglePlay() { musicCmd(isMusicPlaying ? "pause" : "play"); }
+let musicCmd = function(n) { Bluetooth.println(JSON.stringify({t:"music", n:n})); };
+let musicTogglePlay = function() { musicCmd(isMusicPlaying ? "pause" : "play"); };
 
 // ---- Messages ----
 /** Remove message counts that WhatsApp adds: "Bob (2 messages)", "Family (3 messages): Bob".
  Same rule as in retromessagegui. */
-function normTitle(t) {
+let normTitle = function(t) {
   return (t||"").split(": ").map(p => p.replace(/\s\(\d+ [^()]*\)$/, "").trim()).join(": ");
-}
+};
 
 /** Conversation name: the chat name for WhatsApp group chats ("chat: sender"), else the title */
-function convLabel(m) {
+let convLabel = function(m) {
   var t = normTitle(m.title);
   if ((m.src||"").toLowerCase().includes("whatsapp")) {
     var i = t.lastIndexOf(": ");
     if (i > 0) t = t.substr(0, i);
   }
   return t;
-}
+};
 
 /** Snap an app colour ("#4c5") to the nearest of the screen's 8 colours, so icons aren't dithered */
-function snapColor(c) {
+let snapColor = function(c) {
   if (typeof c != "string" || c[0] != "#") return "#0ff";
   var h = c.length==4 ? [c[1],c[2],c[3]] : [c[1],c[3],c[5]];
   var r = parseInt(h[0],16)>=8, gr = parseInt(h[1],16)>=8, b = parseInt(h[2],16)>=8;
   if (!r && !gr && !b) return "#0ff";
   return "#"+(r?"f":"0")+(gr?"f":"0")+(b?"f":"0");
-}
+};
 
 /** Message cards: one card per conversation (newest first), y=121..175 */
 const CARDS_Y = 121;
-function updateMessages(message)
+let updateMessages = function(message)
 {
   g.reset().setBgColor(0,0,0).clearRect(0, CARDS_Y, 175, 175);
   var entries = [];
@@ -377,12 +378,12 @@ function updateMessages(message)
     for (var j=0; j<3 && j<l.length; j++)
       g.drawString(j==2 && l.length>3 ? ellipsis(l[2]+" "+l[3], 50) : l[j], x+4, y+29+j*7);
   }
-}
+};
 
 
 // ---- Main loop: dial every second, time once a minute ----
-var lastMinute = -1;
-function tick() {
+let lastMinute = -1;
+let tick = function() {
   var d = new Date();
   if (d.getMinutes() != lastMinute) {
     lastMinute = d.getMinutes();
@@ -392,18 +393,19 @@ function tick() {
   drawDial(d.getSeconds(), true);
   if (drawTimeout) clearTimeout(drawTimeout);
   drawTimeout = setTimeout(function(){ drawTimeout = undefined; tick(); }, 1000 - (Date.now() % 1000));
-}
-function redrawDial() { drawDial(new Date().getSeconds()); }
+};
+let redrawDial = function() { drawDial(new Date().getSeconds()); };
 
-Bangle.on("message", (type, message)=>{
+let onMessage = function(type, message) {
   if (type == "text") {
     updateMessages(message);
     message.handled = true; // Prevent default message app from launching.
   }
-});
+};
 
-global.GB = (_GB => e => {
-  // we eat music events!
+// We eat music events and pass on the others. The previous GB is restored on unload.
+let oldGB = global.GB;
+let onGB = function(e) {
   switch(e.t) {
     case "musicinfo":
       isMusicActive = true;
@@ -430,19 +432,19 @@ global.GB = (_GB => e => {
       redrawDial();
       break;
     default:
-      // pass on other events
-      if (_GB) setTimeout(_GB, 0, e);
+      if (oldGB) setTimeout(oldGB, 0, e);
   }
-})(global.GB);
+};
+global.GB = onGB;
 
-Bangle.on('touch', function(zone,e) {
+let onTouch = function(zone,e) {
   // tap on the dial: play/pause
   if (e.x < DIAL.x+DIAL.s && e.y >= DIAL.y && e.y < DIAL.y+DIAL.s && isMusicActive) musicTogglePlay();
   // tap on the messages: open the messages app
   if (e.y >= CARDS_Y) require("messages").openGUI();
-});
+};
 
-Bangle.on('drag', function(e) {
+let onDrag = function(e) {
   if (e.b > 0) {
     if (!dragState.started) {
       dragState.startX = e.x;
@@ -459,16 +461,44 @@ Bangle.on('drag', function(e) {
     if (dy < -t && Math.abs(dx/dy) < r) musicCmd("volumeup");
     dragState.started = false;
   }
-});
+};
 
-if (weatherLib) weatherLib.on("update2", function(){ weatherRead = false; if (!isMusicActive) drawMusicInfo(); });
-Bangle.on('lock', redrawDial);
-NRF.on('connect', redrawDial);
-NRF.on('disconnect', redrawDial);
+let onWeather = function(){ weatherRead = false; if (!isMusicActive) drawMusicInfo(); };
+
+Bangle.on("message", onMessage);
+Bangle.on("touch", onTouch);
+Bangle.on("drag", onDrag);
+Bangle.on("lock", redrawDial);
+NRF.on("connect", redrawDial);
+NRF.on("disconnect", redrawDial);
+if (weatherLib) weatherLib.on("update2", onWeather);
+
+// Fast load: this removes everything the clock allocated, so the next app (launcher,
+// messages...) can be loaded without a full reset, and the clock can be loaded back fast.
+Bangle.setUI({mode:"clock", remove:function() {
+  if (drawTimeout) clearTimeout(drawTimeout);
+  if (musicIdleTimeout) clearTimeout(musicIdleTimeout);
+  drawTimeout = musicIdleTimeout = undefined;
+  Bangle.removeListener("message", onMessage);
+  Bangle.removeListener("touch", onTouch);
+  Bangle.removeListener("drag", onDrag);
+  Bangle.removeListener("lock", redrawDial);
+  NRF.removeListener("connect", redrawDial);
+  NRF.removeListener("disconnect", redrawDial);
+  if (weatherLib) weatherLib.removeListener("update2", onWeather);
+  if (global.GB === onGB) global.GB = oldGB;
+  delete Graphics.prototype.setFont5x9Numeric7Seg;
+  delete Graphics.prototype.setFont8x12;
+  delete Graphics.prototype.setFont8x16;
+  require("widget_utils").show();
+}});
+
+// Widgets are loaded (needed for fast loading between apps) but hidden: the face uses the whole screen
+Bangle.loadWidgets();
+require("widget_utils").hide();
 
 drawBackground();
 drawMusicInfo();
 updateMessages();
 tick();
-
-Bangle.setUI("clock");
+}

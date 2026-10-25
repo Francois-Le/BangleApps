@@ -50,7 +50,7 @@ the notification that is still on the phone. Read/unread and delete apply to all
 3. Write `retromessagegui.info`, for example:
 
    ```js
-   require("Storage").writeJSON("retromessagegui.info",{id:"retromessagegui",name:"Retro Messages",src:"retromessagegui.app.js",icon:"retromessagegui.img",type:"app",version:"0.03",sortorder:-9,files:"retromessagegui.info,messagegui,retromessagegui.app.js,retromessagegui.new.js,retromessagegui.boot.js,retromessagegui.settings.js,retromessagegui.img",data:"retromessagegui.json"});
+   require("Storage").writeJSON("retromessagegui.info",{id:"retromessagegui",name:"Retro Messages",src:"retromessagegui.app.js",icon:"retromessagegui.img",type:"app",version:"0.04",sortorder:-9,files:"retromessagegui.info,messagegui,retromessagegui.app.js,retromessagegui.new.js,retromessagegui.boot.js,retromessagegui.settings.js,retromessagegui.img",data:"retromessagegui.json"});
    ```
 4. Restart the watch (long press on the button) so that the boot file runs.
 
