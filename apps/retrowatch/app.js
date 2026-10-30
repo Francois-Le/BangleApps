@@ -352,6 +352,33 @@ let msgAge = function(d) {
   if (m < 1440) return Math.floor(m/60)+"h";
   return Math.floor(m/1440)+"d";
 };
+/** Text for the cards: removes the images that Gadgetbridge embeds in messages for
+ characters it can't send as text (emojis, symbols like the euro sign: "\0" + image),
+ and any other character the card fonts can't draw. A malformed (cut off) image
+ removes the rest of the text instead of being drawn as garbage. */
+let plainText = function(t) {
+  t = ""+(t||"");
+  var o = "", i = 0;
+  while (i < t.length) {
+    var c = t.charCodeAt(i);
+    if (c == 0) {   // embedded image: \0, width, height, bpp, [transparent], [palette], data
+      if (i+3 >= t.length) break;
+      var b = t.charCodeAt(i+3), bpp = b&31, n = 3;
+      if (b&128) n++;
+      if (b&64) n += (1<<bpp)*2;
+      n += Math.ceil(t.charCodeAt(i+1)*t.charCodeAt(i+2)*bpp/8);
+      if (!bpp || i+1+n > t.length) break;   // malformed: drop the rest
+      i += 1+n;
+      if (o.length && o[o.length-1]!=" ") o += " ";
+      continue;
+    }
+    if (c==10 || c==13 || c==9) c = 32;
+    if ((c>=32 && c<127) || (c>=160 && c<256)) o += String.fromCharCode(c);
+    i++;
+  }
+  return o.replace(/  +/g," ").trim();
+};
+
 let updateMessages = function(message)
 {
   g.reset().setBgColor(0,0,0).clearRect(0, CARDS_Y, 175, 175);
@@ -360,21 +387,21 @@ let updateMessages = function(message)
   {
     if (m.title == "Music") continue;
     // one card per conversation
-    var label = convLabel(m) || m.body || "";
+    var label = plainText(convLabel(m)) || plainText(m.body);
     var key = (m.src || "") + "|" + label;
     var existingEntry = entries.find(e => e.key == key);
     if (existingEntry) existingEntry.count++;
     else entries.push({
       key: key,
       msg: label,
-      body: m.body || "",
+      body: plainText(m.body),
       img: require("messageicons").getImage(m),
       col: snapColor(require("messageicons").getColor(m, {default:"#0ff"})),
       count: 1,
       date: m.date   // the newest message of the conversation comes first
     });
   }
-  for (var i=0; i<3 && i<entries.length; i++)
+  for (var i=0; i<3 && i<entries.length; i++) try
   {
     var e = entries[i], x = i*59, x2 = x+57, y = CARDS_Y;
     frame(x, y, x2, 175, 5);
@@ -387,6 +414,8 @@ let updateMessages = function(message)
     var l = g.wrapString(e.body, 50);
     for (var j=0; j<3 && j<l.length; j++)
       g.drawString(j==2 && l.length>3 ? ellipsis(l[2]+" "+l[3], 50) : l[j], x+4, y+29+j*7);
+  } catch (err) {   // never let one message stop the clock from drawing
+    g.reset().setBgColor(0,0,0).clearRect(i*59+1, CARDS_Y+1, i*59+56, 174);
   }
 };
 
@@ -394,22 +423,23 @@ let updateMessages = function(message)
 // ---- Main loop: dial every second, time once a minute ----
 let lastMinute = -1;
 let tick = function() {
+  // schedule the next tick first, so an error below can never freeze the clock
+  if (drawTimeout) clearTimeout(drawTimeout);
+  drawTimeout = setTimeout(function(){ drawTimeout = undefined; tick(); }, 1000 - (Date.now() % 1000));
   var d = new Date();
   if (d.getMinutes() != lastMinute) {
     lastMinute = d.getMinutes();
-    drawTime(d);
-    updateMessages();   // refresh the message ages
-    if (!isMusicActive && lastMinute%5 == 0) drawMusicInfo();
+    try { drawTime(d); } catch (e) { print("retrowatch time", e); }
+    try { updateMessages(); } catch (e) { print("retrowatch msgs", e); }   // refresh the message ages
+    if (!isMusicActive && lastMinute%5 == 0) try { drawMusicInfo(); } catch (e) { print("retrowatch top", e); }
   }
   drawDial(d.getSeconds(), true);
-  if (drawTimeout) clearTimeout(drawTimeout);
-  drawTimeout = setTimeout(function(){ drawTimeout = undefined; tick(); }, 1000 - (Date.now() % 1000));
 };
 let redrawDial = function() { drawDial(new Date().getSeconds()); };
 
 let onMessage = function(type, message) {
   if (type == "text") {
-    updateMessages(message);
+    try { updateMessages(message); } catch (e) { print("retrowatch msgs", e); }
     message.handled = true; // Prevent default message app from launching.
   }
 };
@@ -509,7 +539,7 @@ Bangle.loadWidgets();
 require("widget_utils").hide();
 
 drawBackground();
-drawMusicInfo();
-updateMessages();
+try { drawMusicInfo(); } catch (e) { print("retrowatch top", e); }
+try { updateMessages(); } catch (e) { print("retrowatch msgs", e); }
 tick();
 }
