@@ -414,11 +414,11 @@ let updateMessages = function(message)
     var age = msgAge(e.date);   // age of the newest message, plain yellow text
     if (age) g.setColor(1,1,0).setBgColor(0,0,0).setFont("6x8").setFontAlign(1,-1).drawString(age, x2-4, y+4).setFontAlign(-1,-1);
     g.setColor(0,1,1).setFont("6x8").drawString(cutText(e.msg, 50), x+4, y+19);
-    // start of the last message, 3 lines, "..." if longer
+    // start of the last message, 3 lines, the rest is cut off
     g.setFont("4x6").setColor(1,1,1);
     var l = g.wrapString(e.body, 50);
     for (var j=0; j<3 && j<l.length; j++)
-      g.drawString(j==2 && l.length>3 ? ellipsis(l[2]+" "+l[3], 50) : l[j], x+4, y+29+j*7);
+      g.drawString(j==2 && l.length>3 ? cutText(l[2]+" "+l[3], 50) : l[j], x+4, y+29+j*7);
   } catch (err) {   // never let one message stop the clock from drawing
     g.reset().setBgColor(0,0,0).clearRect(i*59+1, CARDS_Y+1, i*59+56, 174);
   }

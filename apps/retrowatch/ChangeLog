@@ -17,3 +17,4 @@
 0.17: Message cards show the age of the newest message (now, 4m, 2h, 3d) instead of the message count; ages refresh every minute
 0.18: Message cards skip emojis and symbols that Gadgetbridge sends as images (and other characters the fonts can't draw); a bad message can no longer stop the clock from drawing
 0.19: Sender names on the message cards are cut at the card edge instead of ending with "..."
+0.20: Message previews on the cards are cut at the card edge instead of ending with "..."
