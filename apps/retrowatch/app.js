@@ -379,6 +379,11 @@ let plainText = function(t) {
   return o.replace(/  +/g," ").trim();
 };
 
+/** Cut text to fit width w (current font), without "...": the end that doesn't fit is dropped */
+let cutText = function(t, w) {
+  while (t.length && g.stringWidth(t) > w) t = t.slice(0,-1);
+  return t;
+};
 let updateMessages = function(message)
 {
   g.reset().setBgColor(0,0,0).clearRect(0, CARDS_Y, 175, 175);
@@ -408,7 +413,7 @@ let updateMessages = function(message)
     g.setColor(e.col).setBgColor(0,0,0).drawImage(e.img, x+4, y+4, {scale:0.5});
     var age = msgAge(e.date);   // age of the newest message, plain yellow text
     if (age) g.setColor(1,1,0).setBgColor(0,0,0).setFont("6x8").setFontAlign(1,-1).drawString(age, x2-4, y+4).setFontAlign(-1,-1);
-    g.setColor(0,1,1).setFont("6x8").drawString(ellipsis(e.msg, 50), x+4, y+19);
+    g.setColor(0,1,1).setFont("6x8").drawString(cutText(e.msg, 50), x+4, y+19);
     // start of the last message, 3 lines, "..." if longer
     g.setFont("4x6").setColor(1,1,1);
     var l = g.wrapString(e.body, 50);
