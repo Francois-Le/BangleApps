@@ -11,8 +11,8 @@ A clock face for Bangle.js 2.
 * The last text messages as three cards, one per conversation: app icon, age of the newest message (now, 4m, 2h, 3d), sender and the start of the last message.
   WhatsApp counts such as (2 messages) are ignored. A WhatsApp group chat (Family: Bob) is one line (Family).
 * Music: the track across the top of the screen, the artist next to the dial. Long names end with "...".
-* Weather, when no music is playing: an icon for today's weather (sun, clouds, rain, snow, storm, fog), temperature, sun position between sunrise and sunset (with the times; at night a moon between sunset and the next sunrise),
-  wind speed (km/h) and direction, and a graph of the chance of rain for the next 24 hours.
+* Weather, when no music is playing: an icon for today's weather (sun, clouds, rain, snow, storm, fog), "feels like" temperature, sun position between sunrise and sunset (with the times; at night a moon between sunset and the next sunrise),
+  wind speed (km/h) and direction, and a graph of the chance of rain and the temperature (with the high and low) for the next 24 hours.
   The weather comes from Gadgetbridge through the Weather app. For the rain graph, set
   Settings -> Apps -> Weather -> Data type to "forecast". Gadgetbridge needs a weather provider app
   on the phone (for example Breezy Weather).

@@ -18,3 +18,4 @@
 0.18: Message cards skip emojis and symbols that Gadgetbridge sends as images (and other characters the fonts can't draw); a bad message can no longer stop the clock from drawing
 0.19: Sender names on the message cards are cut at the card edge instead of ending with "..."
 0.20: Message previews on the cards are cut at the card edge instead of ending with "..."
+0.21: Temperature for the next 24 h over the rain graph (dotted yellow line, high/low on the right edge); top left shows the "feels like" temperature
