@@ -19,3 +19,4 @@
 0.19: Sender names on the message cards are cut at the card edge instead of ending with "..."
 0.20: Message previews on the cards are cut at the card edge instead of ending with "..."
 0.21: Temperature for the next 24 h over the rain graph (dotted yellow line, high/low on the right edge); top left shows the "feels like" temperature
+0.22: Temperature on the rain graph easier to see: thick yellow line with a black outline, bigger high/low values under the TEMP label

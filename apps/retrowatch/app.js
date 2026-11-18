@@ -231,22 +231,24 @@ let drawWxIcon = function(code) {
 
 let hhmm = function(t) { var d = new Date(t); return ("0"+d.getHours()).substr(-2)+":"+("0"+d.getMinutes()).substr(-2); };
 
-/** Temperature for the next 24 h over the rain graph: dotted yellow line scaled between the
- day's low (y=40) and high (y=28), "TEMP" label, and the high/low values on the right edge. */
+/** Temperature for the next 24 h over the rain graph: thick yellow line with a black outline
+ (so it stays visible where it crosses the rain line), scaled between the day's low (y=40) and
+ high (y=28); "TEMP" label with the high and low (6x8 font) stacked under it on the right. */
 let drawTempOverlay = function(t, px) {
-  var lo = Math.min.apply(null, t), hi = Math.max.apply(null, t);
+  var lo = Math.min.apply(null, t), hi = Math.max.apply(null, t), i, d;
   var py = function(v){ return 40-Math.round((v-lo)*12/Math.max(1, hi-lo)); };
-  g.setColor(1,1,0);
-  for (var i=1; i<t.length; i++) {
-    var x0 = px(i-1), y0 = py(t[i-1]), y1 = py(t[i]);
-    g.setPixel(x0, y0).setPixel(x0+2, Math.round((y0+y1)/2));
-  }
+  g.setColor(0,0,0);   // outline
+  for (i=1; i<t.length; i++) for (d=-2; d<=1; d++)
+    g.drawLine(px(i-1), py(t[i-1])+d, px(i), py(t[i])+d);
+  g.setColor(1,1,0);   // 2px line
+  for (i=1; i<t.length; i++)
+    g.drawLine(px(i-1), py(t[i-1]), px(i), py(t[i])).drawLine(px(i-1), py(t[i-1])-1, px(i), py(t[i])-1);
   g.fillRect(px(0)-1, py(t[0])-2, px(0)+1, py(t[0])+1);   // now
   g.setFont("4x6").setFontAlign(1,-1).drawString("TEMP", 172, 20).setFontAlign(-1,-1);
-  // values at the height of the high and the low, right aligned, on a black background
-  (hi==lo ? [[hi, py(hi)-6]] : [[hi, py(hi)-1], [lo, py(lo)-6]]).forEach(function(a) {
-    var s = ""+a[0], w = g.stringWidth(s)+3, x = 172-w;
-    g.setColor(0,0,0).fillRect(x-1, a[1]-1, 172, a[1]+6);
+  g.setFont("6x8");
+  (hi==lo ? [[hi, 35]] : [[hi, 26], [lo, 35]]).forEach(function(a) {
+    var s = ""+a[0], w = g.stringWidth(s)+3, x = 173-w;
+    g.setColor(0,0,0).fillRect(x-1, a[1]-1, x+w, a[1]+7);
     g.setColor(1,1,0).drawString(s, x, a[1]).drawRect(x+w-2, a[1], x+w-1, a[1]+1);   // + degree sign
   });
 };
