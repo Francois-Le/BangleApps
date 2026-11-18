@@ -178,6 +178,8 @@ let getWeather = function() {
   if (!w || w.temp === undefined) return;
   var r = {
     temp: Math.round(w.v==2 ? w.temp : w.temp-273),   // v1 is in Kelvin
+    // "feels like" temperature, shown top left (falls back to the measured temperature)
+    feels: w.feels===undefined ? undefined : Math.round(w.v==2 ? w.feels : w.feels-273),
     // weather for the whole day (set by the Open-Meteo app), else the current weather
     daycode: w.daycode!==undefined ? w.daycode : w.code,
     wind: Math.round(w.wind||0), wdir: w.wdir
@@ -189,6 +191,11 @@ let getWeather = function() {
     while (i0 < hf.time.length-1 && hf.time[i0+1] <= now) i0++;
     r.rain = [];
     for (var i=i0; i<hf.rain.length && r.rain.length<24; i++) r.rain.push(hf.rain[i]);
+    if (hf.temp) {   // hourly temperature, same hours as the rain chance
+      r.htemp = [];
+      for (var i=i0; i<hf.temp.length && r.htemp.length<r.rain.length; i++) r.htemp.push(Math.round(hf.temp[i]));
+      if (r.htemp.length < 2) delete r.htemp;
+    }
     r.rainStart = hf.time[i0]*1000;
     if (r.rain.length < 2) delete r.rain;
   }
@@ -224,14 +231,35 @@ let drawWxIcon = function(code) {
 
 let hhmm = function(t) { var d = new Date(t); return ("0"+d.getHours()).substr(-2)+":"+("0"+d.getMinutes()).substr(-2); };
 
+/** Temperature for the next 24 h over the rain graph: dotted yellow line scaled between the
+ day's low (y=40) and high (y=28), "TEMP" label, and the high/low values on the right edge. */
+let drawTempOverlay = function(t, px) {
+  var lo = Math.min.apply(null, t), hi = Math.max.apply(null, t);
+  var py = function(v){ return 40-Math.round((v-lo)*12/Math.max(1, hi-lo)); };
+  g.setColor(1,1,0);
+  for (var i=1; i<t.length; i++) {
+    var x0 = px(i-1), y0 = py(t[i-1]), y1 = py(t[i]);
+    g.setPixel(x0, y0).setPixel(x0+2, Math.round((y0+y1)/2));
+  }
+  g.fillRect(px(0)-1, py(t[0])-2, px(0)+1, py(t[0])+1);   // now
+  g.setFont("4x6").setFontAlign(1,-1).drawString("TEMP", 172, 20).setFontAlign(-1,-1);
+  // values at the height of the high and the low, right aligned, on a black background
+  (hi==lo ? [[hi, py(hi)-6]] : [[hi, py(hi)-1], [lo, py(lo)-6]]).forEach(function(a) {
+    var s = ""+a[0], w = g.stringWidth(s)+3, x = 172-w;
+    g.setColor(0,0,0).fillRect(x-1, a[1]-1, 172, a[1]+6);
+    g.setColor(1,1,0).drawString(s, x, a[1]).drawRect(x+w-2, a[1], x+w-1, a[1]+1);   // + degree sign
+  });
+};
+
 let drawWeather = function() {
   var w = getWeather();
   if (!w) return;
   g.reset().setBgColor(0,0,0).setColor(0,1,1).setFontAlign(-1,-1);
   // weather icon for the day + temperature (top left)
   if (w.daycode !== undefined) drawWxIcon(w.daycode);
-  g.setColor(0,1,1).setBgColor(0,0,0).setFont("8x16").drawString(w.temp, 18, 1);
-  var tw = 18+g.stringWidth(""+w.temp);
+  var shown = w.feels!==undefined ? w.feels : w.temp;   // "feels like" temperature
+  g.setColor(0,1,1).setBgColor(0,0,0).setFont("8x16").drawString(shown, 18, 1);
+  var tw = 18+g.stringWidth(""+shown);
   g.drawRect(tw+2, 2, tw+4, 4);
   g.setFont("8x12").drawString("C", tw+6, 3);
   var tempEnd = tw+6+g.stringWidth("C");
@@ -283,11 +311,10 @@ let drawWeather = function() {
     }
     for (var i=1; i<w.rain.length; i++)
       g.drawLine(px(i-1), py(w.rain[i-1]), px(i), py(w.rain[i])).drawLine(px(i-1), py(w.rain[i-1])-1, px(i), py(w.rain[i])-1);
-    var im = 0;
-    w.rain.forEach(function(r, i){ if (r > w.rain[im]) im = i; });
-    g.setColor(1,1,0).fillRect(px(0)-1, py(w.rain[0])-2, px(0)+1, py(w.rain[0])+1);   // now
-    if (w.rain[im] > 0) g.fillRect(px(im)-1, py(w.rain[im])-2, px(im)+1, py(w.rain[im])+1);   // peak
+    // rain in cyan, temperature in yellow
+    g.fillRect(px(0)-1, py(w.rain[0])-2, px(0)+1, py(w.rain[0])+1);   // now
     g.setFont("4x6").drawString("RAIN", 80, 20);
+    if (w.htemp) drawTempOverlay(w.htemp, px);
   }
 };
 
